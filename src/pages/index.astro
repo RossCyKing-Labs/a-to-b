@@ -3,11 +3,12 @@ import BaseLayout from '~/layouts/BaseLayout.astro';
 
 const converters = [
   { title: 'Image', formats: 'PNG · JPEG · WebP', href: '/image', ready: true },
-  { title: 'Word → PDF', formats: '.docx → .pdf', href: '/word-to-pdf', ready: false },
+  { title: 'Word → PDF', formats: '.docx → .pdf', href: '/word-to-pdf', ready: true },
   { title: 'PDF → Word', formats: '.pdf → .docx', href: '/pdf-to-word', ready: false },
 ];
 
 const anyReady = converters.some((c) => c.ready);
+const firstReadyHref = converters.find((c) => c.ready)?.href ?? '/';
 ---
 
 <BaseLayout title="a → b · privacy-first file converter">
@@ -22,11 +23,11 @@ const anyReady = converters.some((c) => c.ready);
     {
       anyReady ? (
         <a
-          href="/image"
+          href={firstReadyHref}
           class="inline-block rounded-lg px-6 py-3 text-base font-semibold text-white transition hover:opacity-90"
           style="background: var(--color-accent)"
         >
-          Try the image converter →
+          Pick a converter below →
         </a>
       ) : (
         <p

@@ -1,0 +1,74 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import WordToPdfConverter from '~/components/WordToPdfConverter';
+---
+
+<BaseLayout
+  title="Word to PDF · a → b"
+  description="Convert Word documents (.docx) to PDF in your browser. Files never leave your device."
+>
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Word → PDF</h1>
+    <p class="mt-2 text-lg" style="color: var(--color-muted)">
+      Convert Word documents (.docx) to PDF — entirely in your browser.
+    </p>
+  </header>
+
+  <WordToPdfConverter client:load />
+
+  <aside
+    class="mt-12 space-y-6 rounded-xl border p-6"
+    style="border-color: var(--color-border); background: var(--color-accent-soft)"
+  >
+    <div>
+      <h2
+        class="mb-2 text-xs font-semibold tracking-wider uppercase"
+        style="color: var(--color-accent)"
+      >
+        How this works
+      </h2>
+      <p class="text-sm leading-relaxed">
+        We read your <code>.docx</code> file in the browser using mammoth.js, render it with print-friendly
+        styling, and trigger your browser's native print dialog. You pick <strong>"Save as PDF"</strong> as
+        the destination. The result is a proper PDF with <strong>selectable text</strong> — searchable,
+        accessible, and small in file size.
+      </p>
+      <p class="mt-2 text-sm leading-relaxed">
+        Your file never leaves your device. Verify in DevTools — the Network tab shows zero outbound
+        requests during conversion.
+      </p>
+    </div>
+
+    <div>
+      <h2
+        class="mb-2 text-xs font-semibold tracking-wider uppercase"
+        style="color: var(--color-accent)"
+      >
+        What may not round-trip perfectly
+      </h2>
+      <ul
+        class="ml-5 list-disc space-y-1 text-sm leading-relaxed"
+        style="color: var(--color-muted)"
+      >
+        <li>Custom fonts — the PDF uses your system fonts, not Word's exact fonts</li>
+        <li>Complex multi-column layouts</li>
+        <li>Headers, footers, and page numbers (can be added in the print dialog)</li>
+        <li>Tracked changes and comments — these are stripped</li>
+        <li>Older <code>.doc</code> format (use Word or LibreOffice to save as <code>.docx</code> first)</li>
+      </ul>
+    </div>
+
+    <div>
+      <h2
+        class="mb-2 text-xs font-semibold tracking-wider uppercase"
+        style="color: var(--color-accent)"
+      >
+        Tip
+      </h2>
+      <p class="text-sm leading-relaxed">
+        In the print dialog, set <strong>Destination</strong> to "Save as PDF" and <strong>Margins</strong>
+        to "Default" for the best result. Most browsers remember this for next time.
+      </p>
+    </div>
+  </aside>
+</BaseLayout>
