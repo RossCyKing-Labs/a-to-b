@@ -18,7 +18,7 @@ A privacy-first, free file conversion web app. Files never leave the user's devi
 | 3 | PDF → Word via pdf.js + docx, paragraph reconstruction, heading/list detection | ✅ Shipped |
 | 3.5 | Bold/italic + hyperlink preservation in PDF→Word output | ✅ Shipped |
 | 4 | PWA (offline + installable), 404 page, Buy Me a Coffee link | ✅ Shipped |
-| 5 | Core PDF toolkit: Merge, Split, JPG↔PDF, Rotate, Compress | 🛠 Planned (next) |
+| 5 | Core PDF toolkit: Merge, Split, JPG↔PDF, Rotate, Compress | ✅ Shipped |
 | 6+ | OCR, security tools, office adjacent | Deferred |
 
 ---
@@ -360,4 +360,4 @@ When real users start showing up, watch for:
 
 ---
 
-*Plan version: v3 — May 10, 2026. Phases 0–4 shipped; Phase 5 (core PDF toolkit) planned.*
+*Plan version: v4 — May 10, 2026. Phases 0–5 shipped.*

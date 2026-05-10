@@ -1,0 +1,36 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import CompressPdfConverter from '~/components/CompressPdfConverter';
+---
+
+<BaseLayout
+  title="Compress PDF · a → b"
+  description="Shrink PDF file size in your browser. Files never leave your device."
+>
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Compress PDF</h1>
+    <p class="mt-2 text-lg" style="color: var(--color-muted)">
+      Shrink PDF file size — entirely in your browser.
+    </p>
+  </header>
+
+  <CompressPdfConverter client:load />
+
+  <aside
+    class="mt-12 rounded-xl border p-6"
+    style="border-color: var(--color-border); background: var(--color-accent-soft)"
+  >
+    <h2
+      class="mb-2 text-xs font-semibold tracking-wider uppercase"
+      style="color: var(--color-accent)"
+    >
+      How this works
+    </h2>
+    <p class="text-sm leading-relaxed">
+      Each page is rendered to a JPEG at a controlled resolution and quality, then assembled into a
+      new PDF locally. This works very well for scanned or image-heavy PDFs; for text-only PDFs the
+      gains are modest. Trade-off: <strong>output text is rasterized</strong> — not selectable or
+      searchable. Your file never leaves your device.
+    </p>
+  </aside>
+</BaseLayout>

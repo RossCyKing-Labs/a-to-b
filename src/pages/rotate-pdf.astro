@@ -1,0 +1,34 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import RotatePdfConverter from '~/components/RotatePdfConverter';
+---
+
+<BaseLayout
+  title="Rotate PDF · a → b"
+  description="Rotate every page of a PDF in your browser. Files never leave your device."
+>
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Rotate PDF</h1>
+    <p class="mt-2 text-lg" style="color: var(--color-muted)">
+      Rotate every page of a PDF — entirely in your browser.
+    </p>
+  </header>
+
+  <RotatePdfConverter client:load />
+
+  <aside
+    class="mt-12 rounded-xl border p-6"
+    style="border-color: var(--color-border); background: var(--color-accent-soft)"
+  >
+    <h2
+      class="mb-2 text-xs font-semibold tracking-wider uppercase"
+      style="color: var(--color-accent)"
+    >
+      How this works
+    </h2>
+    <p class="text-sm leading-relaxed">
+      Page rotation is stored as PDF metadata — the underlying content stays untouched, so there's
+      no quality loss and text remains selectable. Your file never leaves your device.
+    </p>
+  </aside>
+</BaseLayout>

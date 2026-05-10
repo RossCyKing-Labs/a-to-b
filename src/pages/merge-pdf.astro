@@ -1,0 +1,35 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import MergePdfConverter from '~/components/MergePdfConverter';
+---
+
+<BaseLayout
+  title="Merge PDF · a → b"
+  description="Combine multiple PDFs into one in your browser. Files never leave your device."
+>
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Merge PDF</h1>
+    <p class="mt-2 text-lg" style="color: var(--color-muted)">
+      Combine multiple PDFs into one — entirely in your browser.
+    </p>
+  </header>
+
+  <MergePdfConverter client:load />
+
+  <aside
+    class="mt-12 rounded-xl border p-6"
+    style="border-color: var(--color-border); background: var(--color-accent-soft)"
+  >
+    <h2
+      class="mb-2 text-xs font-semibold tracking-wider uppercase"
+      style="color: var(--color-accent)"
+    >
+      How this works
+    </h2>
+    <p class="text-sm leading-relaxed">
+      Each PDF is read locally, pages are copied into a single new PDF, and you download the
+      result. Pages keep their original formatting, fonts, and selectable text — no rasterization.
+      Your files never touch a server.
+    </p>
+  </aside>
+</BaseLayout>
