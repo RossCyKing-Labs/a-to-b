@@ -60,6 +60,19 @@ export async function isJpegOrPng(file: File): Promise<'jpeg' | 'png' | null> {
 
 const PDF_MIME = 'application/pdf';
 
+/**
+ * Wrap pdf-lib's output bytes in a Blob.
+ *
+ * TS 5.7+ made Uint8Array generic over the buffer type. pdf-lib's save()
+ * returns Uint8Array<ArrayBufferLike>, but the Blob constructor only accepts
+ * BlobPart (which requires Uint8Array<ArrayBuffer>, i.e. not SharedArrayBuffer).
+ * pdf-lib never produces a SharedArrayBuffer in practice, so this cast is
+ * safe — it's just appeasing the stricter type system.
+ */
+function pdfBlob(bytes: Uint8Array): Blob {
+  return new Blob([bytes as BlobPart], { type: PDF_MIME });
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Merge: N PDFs → 1 PDF
 // ────────────────────────────────────────────────────────────────────────────
@@ -72,8 +85,7 @@ export async function mergePdfs(files: File[]): Promise<Blob> {
     const pages = await merged.copyPages(src, src.getPageIndices());
     pages.forEach((page) => merged.addPage(page));
   }
-  const bytes = await merged.save();
-  return new Blob([bytes], { type: PDF_MIME });
+  return pdfBlob(await merged.save());
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -96,10 +108,9 @@ export async function splitPdfPerPage(file: File): Promise<NamedBlob[]> {
     const doc = await PDFDocument.create();
     const [page] = await doc.copyPages(src, [i]);
     doc.addPage(page);
-    const bytes = await doc.save();
     out.push({
       name: `${stem}-page-${String(i + 1).padStart(pad, '0')}.pdf`,
-      blob: new Blob([bytes], { type: PDF_MIME }),
+      blob: pdfBlob(await doc.save()),
     });
   }
   return out;
@@ -118,8 +129,7 @@ export async function rotatePdf(file: File, by: RotationDegrees): Promise<Blob> 
     const current = page.getRotation().angle;
     page.setRotation(degrees(((current + by) % 360 + 360) % 360));
   }
-  const bytes = await doc.save();
-  return new Blob([bytes], { type: PDF_MIME });
+  return pdfBlob(await doc.save());
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -184,8 +194,7 @@ export async function imagesToPdf(
     });
   }
 
-  const bytes = await doc.save();
-  return new Blob([bytes], { type: PDF_MIME });
+  return pdfBlob(await doc.save());
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -307,6 +316,5 @@ export async function compressPdf(file: File, level: CompressLevel = 'medium'): 
     });
   }
 
-  const bytes = await out.save();
-  return new Blob([bytes], { type: PDF_MIME });
+  return pdfBlob(await out.save());
 }
