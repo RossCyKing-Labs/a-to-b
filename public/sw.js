@@ -12,10 +12,16 @@
  * It never sends user files anywhere — file conversion still happens in
  * the page, in memory, with no upload endpoint.
  *
+ * Note on redirects: routes like /image are served from /image/index.html
+ * via a 301. Browsers refuse to accept a "redirected" response for a
+ * navigation request whose redirect mode is "manual" (the default). We
+ * sanitize redirected responses by re-creating them as fresh Responses
+ * without the redirected flag — see sanitize() below.
+ *
  * Bump CACHE_VERSION when shipping changes that require old caches gone.
  */
 
-const CACHE_VERSION = 'a-to-b-v1';
+const CACHE_VERSION = 'a-to-b-v2';
 
 const PRECACHE = [
   '/',
@@ -32,15 +38,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE_VERSION);
-      // addAll fails atomically if any precache target 404s — use individual
-      // adds with catch so a single missing path doesn't break the install.
-      await Promise.allSettled(
-        PRECACHE.map((url) =>
-          cache.add(new Request(url, { credentials: 'same-origin' })).catch((err) => {
-            console.warn('[sw] precache miss:', url, err);
-          }),
-        ),
-      );
+      await Promise.allSettled(PRECACHE.map((url) => precacheUrl(cache, url)));
       self.skipWaiting();
     })(),
   );
@@ -50,7 +48,9 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       const keys = await caches.keys();
-      await Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k)));
+      await Promise.all(
+        keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k)),
+      );
       await self.clients.claim();
     })(),
   );
@@ -67,22 +67,38 @@ self.addEventListener('fetch', (event) => {
   // Same-origin only. We never proxy or fetch off-origin.
   if (url.origin !== self.location.origin) return;
 
-  // Don't intercept the PDF.js worker (it's same-origin and works fine
-  // through the cache, but we skip on extra safety) or any blob: URLs.
+  // Don't intercept blob: URLs (PDF.js worker uses these).
   if (url.protocol === 'blob:') return;
 
   const isHtml =
     req.mode === 'navigate' ||
-    req.headers.get('accept')?.includes('text/html');
+    (req.headers.get('accept') || '').includes('text/html');
 
   if (isHtml) {
-    // Stale-while-revalidate for HTML: serve cached if we have it, refresh in background.
     event.respondWith(staleWhileRevalidate(req));
   } else {
-    // Cache-first for static assets (Astro hashes them, so they're immutable).
     event.respondWith(cacheFirst(req));
   }
 });
+
+/**
+ * Manual precache helper that handles redirects safely.
+ * cache.add() and cache.addAll() refuse to cache redirected responses,
+ * so we fetch + sanitize + put ourselves.
+ */
+async function precacheUrl(cache, url) {
+  try {
+    const response = await fetch(url, {
+      credentials: 'same-origin',
+      cache: 'reload',
+    });
+    if (!response.ok) return;
+    const sane = await sanitize(response);
+    await cache.put(url, sane);
+  } catch (err) {
+    console.warn('[sw] precache miss:', url, err);
+  }
+}
 
 async function cacheFirst(request) {
   const cache = await caches.open(CACHE_VERSION);
@@ -90,21 +106,45 @@ async function cacheFirst(request) {
   if (cached) return cached;
   try {
     const response = await fetch(request);
-    if (response.ok) cache.put(request, response.clone());
-    return response;
-  } catch (err) {
-    return cached || new Response('Offline', { status: 503, statusText: 'Offline' });
+    if (response.ok) {
+      const forCache = await sanitize(response.clone());
+      cache.put(request, forCache);
+    }
+    return await sanitize(response);
+  } catch {
+    return new Response('Offline', { status: 503, statusText: 'Offline' });
   }
 }
 
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(CACHE_VERSION);
   const cached = await cache.match(request);
+
   const networkPromise = fetch(request)
-    .then((response) => {
-      if (response.ok) cache.put(request, response.clone());
-      return response;
+    .then(async (response) => {
+      if (response.ok) {
+        const forCache = await sanitize(response.clone());
+        cache.put(request, forCache);
+      }
+      return await sanitize(response);
     })
     .catch(() => cached);
+
   return cached || networkPromise;
+}
+
+/**
+ * If the response was the result of a redirect, the browser won't accept it
+ * for navigation requests (whose redirect mode is "manual"). Re-create the
+ * response without the redirected flag by reading the body and instantiating
+ * a fresh Response.
+ */
+async function sanitize(response) {
+  if (!response.redirected) return response;
+  const body = await response.blob();
+  return new Response(body, {
+    status: response.status,
+    statusText: response.statusText || '',
+    headers: response.headers,
+  });
 }
