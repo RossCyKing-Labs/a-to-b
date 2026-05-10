@@ -1,12 +1,14 @@
-# AtoB *(working name)*
+# a → b *(working name)*
 
 A free, privacy-first file converter. Files never leave your device.
 
 > Converts a → b. Nothing else. No accounts. No uploads. No tracking. No ads. No limits.
 
+**Live:** [a-to-b.rosscyking1115.workers.dev](https://a-to-b.rosscyking1115.workers.dev)
+
 ## Status
 
-Pre-alpha. See [`PLAN.md`](./PLAN.md) for the full project plan and roadmap.
+Pre-alpha — placeholder UI only, converters not yet implemented. See [`PLAN.md`](./PLAN.md) for the full roadmap.
 
 ## What it will do (v1)
 
