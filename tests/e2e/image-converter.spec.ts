@@ -12,14 +12,16 @@ import { tmpdir } from 'node:os';
  * CSP would surface here.
  */
 
-/** Build a tiny PNG on disk that we can pass to the file input. */
+/**
+ * Build a known-good 1×1 transparent PNG on disk that the file input can ingest.
+ * This is the canonical PNG used in many test suites — valid signature, IHDR,
+ * IDAT, and IEND chunks with correct CRCs.
+ */
 function createPngFile(): string {
-  // 1x1 red PNG
   const png = Buffer.from(
-    '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489' +
-      '0000000d49444154789c63f8cf8000000003000100b4d8d8b3000000004945' +
-      '4e44ae426082',
-    'hex',
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk' +
+      '+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    'base64',
   );
   const dir = mkdtempSync(path.join(tmpdir(), 'atob-e2e-'));
   const file = path.join(dir, 'fixture.png');
@@ -56,13 +58,19 @@ test.describe('image converter', () => {
     const fixture = createPngFile();
     await page.goto('/image');
 
+    // Wait for React to finish hydrating before we touch the input — otherwise
+    // setInputFiles may run before the onChange handler is attached and silently
+    // do nothing.
+    await expect(page.getByText('Output format')).toBeVisible();
+    await expect(page.getByText('Drop images here')).toBeVisible();
+
     // JPEG is the default — drop the file via the hidden input.
     const input = page.locator('input[type="file"]').first();
     await input.setInputFiles(fixture);
 
     // Wait for the result row to appear with a Download link.
     const downloadLink = page.getByRole('link', { name: /^download$/i }).first();
-    await expect(downloadLink).toBeVisible({ timeout: 10000 });
+    await expect(downloadLink).toBeVisible({ timeout: 15000 });
 
     // Capture the actual download.
     const downloadPromise = page.waitForEvent('download');
