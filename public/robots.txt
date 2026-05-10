@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://a-to-b.pages.dev/sitemap-index.xml

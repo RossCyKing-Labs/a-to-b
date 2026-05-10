@@ -1,0 +1,84 @@
+---
+import '~/styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const {
+  title,
+  description = 'A free, privacy-first file converter that runs entirely in your browser. Files never leave your device.',
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+
+    <title>{title}</title>
+  </head>
+  <body class="flex min-h-screen flex-col">
+    <header
+      class="border-b"
+      style="border-color: var(--color-border)"
+    >
+      <nav class="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
+        <a href="/" class="text-lg font-bold tracking-tight">
+          a <span style="color: var(--color-accent)">→</span> b
+        </a>
+        <div class="flex gap-6 text-sm">
+          <a href="/" class="hover:underline">Home</a>
+          <a href="/about" class="hover:underline">About</a>
+          <a href="/privacy" class="hover:underline">Privacy</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="mx-auto w-full max-w-4xl flex-1 px-4 py-12">
+      <slot />
+    </main>
+
+    <footer
+      class="mt-12 border-t"
+      style="border-color: var(--color-border)"
+    >
+      <div
+        class="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4 px-4 py-6 text-sm"
+        style="color: var(--color-muted)"
+      >
+        <span>
+          © {new Date().getFullYear()} a → b · Free forever ·{' '}
+          <a
+            href="https://github.com/rosscyking1115/a-to-b"
+            class="underline hover:no-underline"
+            rel="noopener"
+          >
+            Open source
+          </a>
+        </span>
+        <span>No uploads. No tracking. No ads.</span>
+      </div>
+    </footer>
+  </body>
+</html>

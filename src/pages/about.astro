@@ -1,0 +1,39 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="About · a → b">
+  <h1 class="mb-6 text-3xl font-bold">About</h1>
+
+  <div class="space-y-6 text-base leading-relaxed">
+    <p>
+      a → b is a free file converter that does one thing: convert files from format
+      <em>a</em> to format <em>b</em>, in your browser, without ever sending your data anywhere.
+    </p>
+
+    <h2 class="mt-8 text-xl font-semibold">How is this free?</h2>
+    <p>
+      It costs us almost nothing to run. The site is static HTML and JavaScript hosted on
+      Cloudflare's free tier. Conversion happens on your device, so we don't pay for servers to
+      process your files. We don't sell your data. We don't show ads. If you'd like to support the
+      project, you can buy us a coffee (link coming soon).
+    </p>
+
+    <h2 class="mt-8 text-xl font-semibold">Why does this exist?</h2>
+    <p>
+      Most online file converters upload your files to their servers. Even when they say they don't
+      keep them, you have to take their word for it. We wanted a tool we could trust with personal
+      documents — contracts, tax forms, scanned IDs — without that leap of faith.
+    </p>
+
+    <h2 class="mt-8 text-xl font-semibold">Open source</h2>
+    <p>
+      The code is on
+      <a
+        href="https://github.com/rosscyking1115/a-to-b"
+        class="underline hover:no-underline"
+        rel="noopener">GitHub</a
+      >. Anyone can audit it.
+    </p>
+  </div>
+</BaseLayout>
