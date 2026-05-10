@@ -28,18 +28,22 @@ export default function FormatPicker({
         <div className="grid gap-2 sm:grid-cols-3">
           {FORMATS.map((fmt) => {
             const selected = value === fmt.id;
+            const inputId = `fmt-${fmt.id}`;
             return (
               <label
                 key={fmt.id}
-                className="cursor-pointer rounded-lg border p-3 transition"
+                htmlFor={inputId}
+                className="block cursor-pointer rounded-lg border p-3 transition"
                 style={{
                   borderColor: selected ? 'var(--color-accent)' : 'var(--color-border)',
                   background: selected ? 'var(--color-accent-soft)' : 'transparent',
                 }}
               >
                 <input
+                  id={inputId}
                   type="radio"
                   name="format"
+                  value={fmt.id}
                   className="sr-only"
                   checked={selected}
                   onChange={() => onChange(fmt.id)}

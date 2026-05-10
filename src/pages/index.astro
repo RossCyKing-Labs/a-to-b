@@ -8,7 +8,6 @@ const converters = [
 ];
 
 const anyReady = converters.some((c) => c.ready);
-const firstReadyHref = converters.find((c) => c.ready)?.href ?? '/';
 ---
 
 <BaseLayout title="a → b · privacy-first file converter">
@@ -17,21 +16,13 @@ const firstReadyHref = converters.find((c) => c.ready)?.href ?? '/';
       Convert files.
       <span style="color: var(--color-accent)">Privately.</span>
     </h1>
-    <p class="mx-auto mb-8 max-w-xl text-lg sm:text-xl" style="color: var(--color-muted)">
+    <p class="mx-auto max-w-xl text-lg sm:text-xl" style="color: var(--color-muted)">
       A free file converter that runs entirely in your browser. Your files never leave your device.
     </p>
     {
-      anyReady ? (
-        <a
-          href={firstReadyHref}
-          class="inline-block rounded-lg px-6 py-3 text-base font-semibold text-white transition hover:opacity-90"
-          style="background: var(--color-accent)"
-        >
-          Pick a converter below →
-        </a>
-      ) : (
+      !anyReady && (
         <p
-          class="inline-block rounded-full px-4 py-2 text-sm font-medium"
+          class="mt-8 inline-block rounded-full px-4 py-2 text-sm font-medium"
           style="background: var(--color-accent-soft); color: var(--color-accent)"
         >
           Under construction · converters launching soon
@@ -40,7 +31,7 @@ const firstReadyHref = converters.find((c) => c.ready)?.href ?? '/';
     }
   </section>
 
-  <section class="mt-8 grid gap-4 sm:grid-cols-3">
+  <section class="grid gap-4 sm:grid-cols-3">
     {
       converters.map((c) =>
         c.ready ? (
