@@ -2,10 +2,12 @@
 import BaseLayout from '~/layouts/BaseLayout.astro';
 
 const converters = [
-  { title: 'Image', formats: 'PNG · JPEG · WebP', href: '/image', ready: false },
+  { title: 'Image', formats: 'PNG · JPEG · WebP', href: '/image', ready: true },
   { title: 'Word → PDF', formats: '.docx → .pdf', href: '/word-to-pdf', ready: false },
   { title: 'PDF → Word', formats: '.pdf → .docx', href: '/pdf-to-word', ready: false },
 ];
+
+const anyReady = converters.some((c) => c.ready);
 ---
 
 <BaseLayout title="a → b · privacy-first file converter">
@@ -14,36 +16,61 @@ const converters = [
       Convert files.
       <span style="color: var(--color-accent)">Privately.</span>
     </h1>
-    <p
-      class="mx-auto mb-8 max-w-xl text-lg sm:text-xl"
-      style="color: var(--color-muted)"
-    >
+    <p class="mx-auto mb-8 max-w-xl text-lg sm:text-xl" style="color: var(--color-muted)">
       A free file converter that runs entirely in your browser. Your files never leave your device.
     </p>
-    <p
-      class="inline-block rounded-full px-4 py-2 text-sm font-medium"
-      style="background: var(--color-accent-soft); color: var(--color-accent)"
-    >
-      Under construction · converters launching soon
-    </p>
+    {
+      anyReady ? (
+        <a
+          href="/image"
+          class="inline-block rounded-lg px-6 py-3 text-base font-semibold text-white transition hover:opacity-90"
+          style="background: var(--color-accent)"
+        >
+          Try the image converter →
+        </a>
+      ) : (
+        <p
+          class="inline-block rounded-full px-4 py-2 text-sm font-medium"
+          style="background: var(--color-accent-soft); color: var(--color-accent)"
+        >
+          Under construction · converters launching soon
+        </p>
+      )
+    }
   </section>
 
   <section class="mt-8 grid gap-4 sm:grid-cols-3">
     {
-      converters.map((c) => (
-        <article
-          class="rounded-xl border p-6 transition hover:scale-[1.02]"
-          style={`border-color: var(--color-border); opacity: ${c.ready ? '1' : '0.55'}`}
-        >
-          <h2 class="mb-1 font-semibold">{c.title}</h2>
-          <p class="text-sm" style="color: var(--color-muted)">
-            {c.formats}
-          </p>
-          <p class="mt-3 text-xs" style="color: var(--color-muted)">
-            {c.ready ? 'Open →' : 'Coming soon'}
-          </p>
-        </article>
-      ))
+      converters.map((c) =>
+        c.ready ? (
+          <a
+            href={c.href}
+            class="block rounded-xl border p-6 transition hover:scale-[1.02] hover:shadow-sm"
+            style="border-color: var(--color-border)"
+          >
+            <h2 class="mb-1 font-semibold">{c.title}</h2>
+            <p class="text-sm" style="color: var(--color-muted)">
+              {c.formats}
+            </p>
+            <p class="mt-3 text-xs font-medium" style="color: var(--color-accent)">
+              Open →
+            </p>
+          </a>
+        ) : (
+          <article
+            class="rounded-xl border p-6"
+            style="border-color: var(--color-border); opacity: 0.55"
+          >
+            <h2 class="mb-1 font-semibold">{c.title}</h2>
+            <p class="text-sm" style="color: var(--color-muted)">
+              {c.formats}
+            </p>
+            <p class="mt-3 text-xs" style="color: var(--color-muted)">
+              Coming soon
+            </p>
+          </article>
+        ),
+      )
     }
   </section>
 
@@ -51,7 +78,7 @@ const converters = [
     <div>
       <h3 class="mb-1 font-semibold">100% in your browser</h3>
       <p class="text-sm" style="color: var(--color-muted)">
-        Conversion runs locally via WebAssembly. There's no upload endpoint.
+        Conversion runs locally via your browser's built-in tools. There's no upload endpoint.
       </p>
     </div>
     <div>

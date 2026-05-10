@@ -1,0 +1,35 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import ImageConverter from '~/components/ImageConverter';
+---
+
+<BaseLayout
+  title="Image converter · a → b"
+  description="Convert PNG, JPEG, and WebP images in your browser. Files never leave your device."
+>
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Image converter</h1>
+    <p class="mt-2 text-lg" style="color: var(--color-muted)">
+      Convert between PNG, JPEG, and WebP — entirely in your browser.
+    </p>
+  </header>
+
+  <ImageConverter client:load />
+
+  <aside
+    class="mt-12 rounded-xl border p-6"
+    style="border-color: var(--color-border); background: var(--color-accent-soft)"
+  >
+    <h2
+      class="mb-2 text-xs font-semibold tracking-wider uppercase"
+      style="color: var(--color-accent)"
+    >
+      How this works
+    </h2>
+    <p class="text-sm leading-relaxed">
+      Your files are decoded and re-encoded by your browser using the Canvas API. They never touch
+      a server. You can verify in DevTools — the Network tab will show zero outbound requests
+      during conversion.
+    </p>
+  </aside>
+</BaseLayout>
