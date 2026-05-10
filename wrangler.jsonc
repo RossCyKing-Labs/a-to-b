@@ -1,0 +1,27 @@
+/**
+ * Cloudflare Workers config for a-to-b.
+ *
+ * This is a "static assets only" Worker — no server-side code. Everything ships
+ * as static files from ./dist (Astro's build output). Cloudflare serves them
+ * from its global edge.
+ *
+ * Notes on the privacy posture:
+ * - observability is OFF: no request logs are kept in Cloudflare's analytics.
+ *   We don't need them, and the privacy promise is stronger without them.
+ * - _headers (in public/_headers) is honored automatically by static assets,
+ *   so our strict CSP applies to every response.
+ *
+ * Docs: https://developers.cloudflare.com/workers/static-assets/
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "a-to-b",
+  "compatibility_date": "2026-05-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  },
+  "observability": {
+    "enabled": false
+  }
+}

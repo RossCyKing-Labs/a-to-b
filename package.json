@@ -12,7 +12,8 @@
     "astro": "astro",
     "check": "astro check",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "deploy": "pnpm run build && wrangler deploy"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
@@ -29,7 +30,8 @@
     "@types/react-dom": "^19.0.0",
     "prettier": "^3.4.0",
     "prettier-plugin-astro": "^0.14.1",
-    "prettier-plugin-tailwindcss": "^0.6.9"
+    "prettier-plugin-tailwindcss": "^0.6.9",
+    "wrangler": "^4.0.0"
   },
   "packageManager": "pnpm@9.15.0",
   "engines": {
