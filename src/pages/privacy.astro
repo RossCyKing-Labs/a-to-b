@@ -1,0 +1,51 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Privacy · a → b">
+  <h1 class="mb-6 text-3xl font-bold">Privacy</h1>
+
+  <p class="mb-8 text-xl font-medium">Your files never leave your device.</p>
+
+  <div class="space-y-6 text-base leading-relaxed">
+    <p>
+      This is not a marketing claim — it's an architectural fact. There is no upload endpoint on
+      this site. All conversion happens in your browser using WebAssembly.
+    </p>
+
+    <h2 class="mt-8 text-xl font-semibold">What we don't do</h2>
+    <ul class="list-disc space-y-2 pl-6">
+      <li>We don't upload your files anywhere.</li>
+      <li>We don't use Google Analytics, Meta Pixel, or any third-party tracker.</li>
+      <li>We don't set tracking cookies.</li>
+      <li>We don't load fonts, scripts, or images from third parties.</li>
+      <li>We don't show ads.</li>
+      <li>We don't have user accounts.</li>
+    </ul>
+
+    <h2 class="mt-8 text-xl font-semibold">Verify it yourself</h2>
+    <ol class="list-decimal space-y-2 pl-6">
+      <li>Open your browser's DevTools and select the Network tab.</li>
+      <li>Drop in a file and convert it.</li>
+      <li>You'll see zero outbound requests during conversion.</li>
+    </ol>
+
+    <h2 class="mt-8 text-xl font-semibold">What we do store, locally</h2>
+    <p>
+      We use your browser's <code class="rounded bg-black/5 px-1 dark:bg-white/10">localStorage</code>
+      to remember your theme preference (light/dark) and last-used output format. That data never
+      leaves your device. You can clear it anytime via your browser's site settings.
+    </p>
+
+    <h2 class="mt-8 text-xl font-semibold">If we ever break this</h2>
+    <p>
+      Please open an issue on
+      <a
+        href="https://github.com/rosscyking1115/a-to-b"
+        class="underline hover:no-underline"
+        rel="noopener">GitHub</a
+      >. The privacy promise is non-negotiable; any change that adds a tracker, third-party request,
+      or upload endpoint would be a bug.
+    </p>
+  </div>
+</BaseLayout>

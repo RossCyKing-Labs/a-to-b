@@ -1,0 +1,70 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+
+const converters = [
+  { title: 'Image', formats: 'PNG · JPEG · WebP', href: '/image', ready: false },
+  { title: 'Word → PDF', formats: '.docx → .pdf', href: '/word-to-pdf', ready: false },
+  { title: 'PDF → Word', formats: '.pdf → .docx', href: '/pdf-to-word', ready: false },
+];
+---
+
+<BaseLayout title="a → b · privacy-first file converter">
+  <section class="py-12 text-center sm:py-20">
+    <h1 class="mb-4 text-4xl font-bold tracking-tight sm:text-6xl">
+      Convert files.
+      <span style="color: var(--color-accent)">Privately.</span>
+    </h1>
+    <p
+      class="mx-auto mb-8 max-w-xl text-lg sm:text-xl"
+      style="color: var(--color-muted)"
+    >
+      A free file converter that runs entirely in your browser. Your files never leave your device.
+    </p>
+    <p
+      class="inline-block rounded-full px-4 py-2 text-sm font-medium"
+      style="background: var(--color-accent-soft); color: var(--color-accent)"
+    >
+      Under construction · converters launching soon
+    </p>
+  </section>
+
+  <section class="mt-8 grid gap-4 sm:grid-cols-3">
+    {
+      converters.map((c) => (
+        <article
+          class="rounded-xl border p-6 transition hover:scale-[1.02]"
+          style={`border-color: var(--color-border); opacity: ${c.ready ? '1' : '0.55'}`}
+        >
+          <h2 class="mb-1 font-semibold">{c.title}</h2>
+          <p class="text-sm" style="color: var(--color-muted)">
+            {c.formats}
+          </p>
+          <p class="mt-3 text-xs" style="color: var(--color-muted)">
+            {c.ready ? 'Open →' : 'Coming soon'}
+          </p>
+        </article>
+      ))
+    }
+  </section>
+
+  <section class="mt-20 grid gap-6 sm:grid-cols-3">
+    <div>
+      <h3 class="mb-1 font-semibold">100% in your browser</h3>
+      <p class="text-sm" style="color: var(--color-muted)">
+        Conversion runs locally via WebAssembly. There's no upload endpoint.
+      </p>
+    </div>
+    <div>
+      <h3 class="mb-1 font-semibold">No tracking</h3>
+      <p class="text-sm" style="color: var(--color-muted)">
+        No analytics, no cookies, no third-party scripts. You can verify in DevTools.
+      </p>
+    </div>
+    <div>
+      <h3 class="mb-1 font-semibold">Free forever</h3>
+      <p class="text-sm" style="color: var(--color-muted)">
+        No paywalls. No file-size limits. Tip jar if you'd like to support the project.
+      </p>
+    </div>
+  </section>
+</BaseLayout>

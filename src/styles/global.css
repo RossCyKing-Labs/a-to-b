@@ -1,0 +1,51 @@
+@import 'tailwindcss';
+
+/*
+  AtoB design tokens. Tailwind v4 uses CSS-first config via @theme.
+  Keep this list small until Phase 1 — we'll add proper dark-mode tokens,
+  fonts, and motion tokens once we have real components.
+*/
+@theme {
+  --color-bg: #fafaf9;
+  --color-fg: #18181b;
+  --color-muted: #71717a;
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-accent: #f97316;
+  --color-accent-soft: rgba(249, 115, 22, 0.1);
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0a0a0a;
+    --color-fg: #fafafa;
+    --color-muted: #a1a1aa;
+    --color-border: rgba(255, 255, 255, 0.1);
+  }
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
