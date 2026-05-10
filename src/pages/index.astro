@@ -4,7 +4,7 @@ import BaseLayout from '~/layouts/BaseLayout.astro';
 const converters = [
   { title: 'Image', formats: 'PNG · JPEG · WebP', href: '/image', ready: true },
   { title: 'Word → PDF', formats: '.docx → .pdf', href: '/word-to-pdf', ready: true },
-  { title: 'PDF → Word', formats: '.pdf → .docx', href: '/pdf-to-word', ready: false },
+  { title: 'PDF → Word', formats: '.pdf → .docx', href: '/pdf-to-word', ready: true },
 ];
 
 const anyReady = converters.some((c) => c.ready);

@@ -1,0 +1,89 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import PdfToWordConverter from '~/components/PdfToWordConverter';
+---
+
+<BaseLayout
+  title="PDF to Word · a → b"
+  description="Convert PDF files to editable Word documents in your browser. Files never leave your device."
+>
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">PDF → Word</h1>
+    <p class="mt-2 text-lg" style="color: var(--color-muted)">
+      Convert PDF files to editable Word documents (.docx) — entirely in your browser.
+    </p>
+  </header>
+
+  <PdfToWordConverter client:load />
+
+  <aside
+    class="mt-12 space-y-6 rounded-xl border p-6"
+    style="border-color: var(--color-border); background: var(--color-accent-soft)"
+  >
+    <div>
+      <h2
+        class="mb-2 text-xs font-semibold tracking-wider uppercase"
+        style="color: var(--color-accent)"
+      >
+        How this works
+      </h2>
+      <p class="text-sm leading-relaxed">
+        We read your PDF in the browser using pdf.js, extract the text along with its position,
+        font size, and styling (<strong>bold, italic, hyperlinks</strong>), reconstruct paragraphs
+        and headings, and write a new <code>.docx</code> file with the <code>docx</code> library.
+        You get a Word document you can open and edit.
+      </p>
+      <p class="mt-2 text-sm leading-relaxed">
+        Your file never leaves your device. Verify in DevTools — the Network tab shows zero outbound
+        requests during conversion.
+      </p>
+    </div>
+
+    <div>
+      <h2
+        class="mb-2 text-xs font-semibold tracking-wider uppercase"
+        style="color: var(--color-accent)"
+      >
+        Best for
+      </h2>
+      <ul
+        class="ml-5 list-disc space-y-1 text-sm leading-relaxed"
+        style="color: var(--color-muted)"
+      >
+        <li>Text-heavy single-column PDFs (memos, reports, articles, CVs, contracts)</li>
+        <li>PDFs that were originally created from Word or another text-based source</li>
+        <li>Documents with hyperlinks — links are preserved in the Word output</li>
+        <li>Documents with <strong>bold</strong> and <em>italic</em> formatting — preserved when font names allow detection</li>
+      </ul>
+    </div>
+
+    <div>
+      <h2
+        class="mb-2 text-xs font-semibold tracking-wider uppercase"
+        style="color: var(--color-accent)"
+      >
+        What may not round-trip well
+      </h2>
+      <ul
+        class="ml-5 list-disc space-y-1 text-sm leading-relaxed"
+        style="color: var(--color-muted)"
+      >
+        <li>
+          <strong>Scanned PDFs</strong> — these contain images of text, not text. OCR is coming in a
+          later release.
+        </li>
+        <li>
+          <strong>Multi-column layouts</strong> — text from adjacent columns may interleave
+          incorrectly.
+        </li>
+        <li><strong>Tables</strong> — flattened to plain paragraphs in v1.</li>
+        <li><strong>Images, charts, and figures</strong> — text extracted, visuals dropped in v1.</li>
+        <li><strong>Headers, footers, and footnotes</strong> — may merge into the body text.</li>
+        <li><strong>Exact fonts</strong> — output uses Word's default styles, not the original fonts.</li>
+        <li>
+          <strong>Password-protected PDFs</strong> — you'll need to remove the password first.
+        </li>
+      </ul>
+    </div>
+  </aside>
+</BaseLayout>
