@@ -18,7 +18,8 @@ A privacy-first, free file conversion web app. Files never leave the user's devi
 | 3 | PDF → Word via pdf.js + docx, paragraph reconstruction, heading/list detection | ✅ Shipped |
 | 3.5 | Bold/italic + hyperlink preservation in PDF→Word output | ✅ Shipped |
 | 4 | PWA (offline + installable), 404 page, Buy Me a Coffee link | ✅ Shipped |
-| 5+ | Future formats (PDF tools, audio, video, etc.) | Deferred until users ask |
+| 5 | Core PDF toolkit: Merge, Split, JPG↔PDF, Rotate, Compress | 🛠 Planned (next) |
+| 6+ | OCR, security tools, office adjacent | Deferred |
 
 ---
 
@@ -160,18 +161,65 @@ Why first: easiest, validates the whole pipeline (drop file → convert → down
 - [ ] SEO: meta tags, sitemap, OG images per route
 - [ ] Public launch: HN Show, Reddit r/selfhosted, r/privacy, Product Hunt (privacy-tools category)
 
-### Phase 5+ — Future formats (nice-to-have, only when demand exists)
+### Phase 5 — Core PDF toolkit *(planned, ~3 weekends)*
 
-In rough priority order based on common requests for converters:
+After studying iLovePDF (the dominant browser-based PDF service) it's clear the same six tools account for ~80% of their traffic. All six are fully client-side feasible via `pdf-lib` + `pdf.js`, and all preserve the privacy promise. Ship them as a single batch.
 
-1. PDF tools: merge, split, rotate, compress (all straightforward with `pdf-lib`)
-2. Image: AVIF, HEIC → JPEG/PNG
-3. Audio: MP3 ↔ WAV ↔ OGG via `ffmpeg.wasm`
-4. Video: short-clip MP4 ↔ WebM (heavy WASM, big download — gate behind explicit user opt-in)
-5. CSV ↔ XLSX with `sheetjs` (community edition)
-6. Markdown ↔ HTML ↔ PDF
+| Tool | Library | Effort | Doability |
+|---|---|---|---|
+| **Merge PDF** | `pdf-lib` | ~2–3 hours | 9/10 |
+| **Split PDF** | `pdf-lib` | ~3–4 hours | 9/10 |
+| **JPG → PDF** | `pdf-lib` | ~2–3 hours | 9/10 |
+| **PDF → JPG** | `pdf.js` + Canvas | ~3–4 hours | 8/10 |
+| **Rotate PDF** | `pdf-lib` | ~2 hours | 10/10 |
+| **Compress PDF** | `pdf-lib` + Canvas re-encode | ~5–8 hours | 7/10 |
 
-Don't build any of these until users ask. Resist scope creep.
+**New dependency:** `pdf-lib` (~200KB, code-split per route — only loads on the relevant tool page). `pdf.js` and `docx` are already in the bundle from Phase 3.
+
+**Component reuse:** `<FileDrop>`, `<FormatPicker>`, result-list pattern, multi-file batch flow, and the privacy posture (zero outbound requests during conversion) all carry over unchanged from Phases 1–3.
+
+**Routes to add:**
+- `/merge-pdf` — drop N PDFs, drag-reorder, download combined PDF
+- `/split-pdf` — drop one PDF, choose split mode (every page / by range / by custom selection), download a zip
+- `/jpg-to-pdf` — drop images, choose page size/orientation, output single PDF
+- `/pdf-to-jpg` — drop one PDF, render each page as JPG with quality slider, zip download
+- `/rotate-pdf` — drop PDFs, choose rotation (90/180/270), download rotated
+- `/compress-pdf` — drop PDFs, choose target quality, download smaller PDF
+
+**Homepage:** the converter card grid expands from 3 to 9 cards (or we cluster into categories: "Image", "Document", "PDF tools"). Decision point during build.
+
+**Honest limitations to surface in UI:**
+- Compress PDF only re-encodes embedded raster images — vector content stays as-is, so compression ratio depends on input.
+- PDF → JPG renders at screen resolution by default; higher-DPI mode would be a follow-up.
+- Browsers cap memory; very large PDFs (>200MB) may run slow or fail on weaker devices.
+
+### Phase 6+ — Future expansion *(deferred until Phase 5 ships and users tell us what's missing)*
+
+In rough priority order based on real-world utility:
+
+1. **OCR PDF** via Tesseract.js — makes scanned PDFs searchable. Big differentiator vs other browser-only tools. Heavy WASM (~2MB) so lazy-load only on that route.
+2. **PDF security**: Protect (add password) + Unlock (remove known password). Both easy with `pdf-lib`.
+3. **PDF edit basics**: Watermark, page numbers, crop. Easy add-ons.
+4. **Image expansion**: HEIC → JPEG (Apple iPhone shots), AVIF support.
+5. **Office adjacent**: PowerPoint → PDF, Excel → PDF (if users ask).
+6. **Audio**: MP3 ↔ WAV ↔ OGG via `ffmpeg.wasm`.
+7. **Video**: short-clip MP4 ↔ WebM (gate behind explicit opt-in — heavy WASM).
+8. **CSV ↔ XLSX** with `sheetjs` community edition.
+9. **Markdown ↔ HTML ↔ PDF** (browser print covers the PDF leg already).
+
+### What we will NOT build *(deliberate exclusions)*
+
+These either break the privacy promise or aren't worth the complexity:
+
+- **AI summarize / translate** — requires either an LLM API (privacy break) or a multi-hundred-MB on-device model. Hard no.
+- **Full PDF editor** (iLovePDF's "Edit PDF") — months of work for a hobby project, low ROI.
+- **Sign PDF / e-signatures** — useful but adds eIDAS/ESIGN legal liability we don't want.
+- **PDF Forms** — niche professional use, complex UX.
+- **Repair PDF** — outcomes are unreliable, sets bad expectations.
+- **PDF/A archive format** — niche compliance use.
+- **PDF → PowerPoint** — almost nobody actually wants this.
+
+Don't build any of these unless multiple real users ask, repeatedly. Resist scope creep.
 
 ---
 
@@ -312,4 +360,4 @@ When real users start showing up, watch for:
 
 ---
 
-*Plan version: v2 — May 10, 2026. All four planned phases shipped.*
+*Plan version: v3 — May 10, 2026. Phases 0–4 shipped; Phase 5 (core PDF toolkit) planned.*
