@@ -21,7 +21,7 @@
  * Bump CACHE_VERSION when shipping changes that require old caches gone.
  */
 
-const CACHE_VERSION = 'a-to-b-v3';
+const CACHE_VERSION = 'a-to-b-v4';
 
 const PRECACHE = [
   '/',
@@ -30,6 +30,12 @@ const PRECACHE = [
   '/image',
   '/word-to-pdf',
   '/pdf-to-word',
+  '/merge-pdf',
+  '/split-pdf',
+  '/jpg-to-pdf',
+  '/pdf-to-jpg',
+  '/rotate-pdf',
+  '/compress-pdf',
   '/favicon.svg',
   '/manifest.webmanifest',
 ];

@@ -25,19 +25,24 @@
   ],
   "shortcuts": [
     {
-      "name": "Convert images",
-      "url": "/image",
-      "description": "Convert PNG, JPEG, WebP"
-    },
-    {
-      "name": "Word to PDF",
-      "url": "/word-to-pdf",
-      "description": "Convert .docx to .pdf"
+      "name": "Merge PDF",
+      "url": "/merge-pdf",
+      "description": "Combine PDFs into one"
     },
     {
       "name": "PDF to Word",
       "url": "/pdf-to-word",
-      "description": "Convert .pdf to .docx"
+      "description": "Convert .pdf to editable .docx"
+    },
+    {
+      "name": "Convert images",
+      "url": "/image",
+      "description": "PNG, JPEG, WebP"
+    },
+    {
+      "name": "Compress PDF",
+      "url": "/compress-pdf",
+      "description": "Shrink PDF file size"
     }
   ]
 }
