@@ -1,0 +1,69 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Page not found · a → b"
+  description="That page doesn't exist on a → b."
+>
+  <section class="py-16 text-center sm:py-24">
+    <p
+      class="mb-2 text-sm font-semibold tracking-wider uppercase"
+      style="color: var(--color-accent)"
+    >
+      404
+    </p>
+    <h1 class="mb-4 text-4xl font-bold tracking-tight sm:text-5xl">
+      That page doesn't exist
+    </h1>
+    <p
+      class="mx-auto mb-8 max-w-lg text-lg"
+      style="color: var(--color-muted)"
+    >
+      We only do one thing — convert files privately, in your browser. Try one of these:
+    </p>
+
+    <div class="mx-auto grid max-w-2xl gap-3 sm:grid-cols-3">
+      <a
+        href="/image"
+        class="rounded-xl border p-4 text-left transition hover:scale-[1.02]"
+        style="border-color: var(--color-border)"
+      >
+        <div class="font-semibold">Image</div>
+        <div class="mt-1 text-xs" style="color: var(--color-muted)">
+          PNG · JPEG · WebP
+        </div>
+      </a>
+      <a
+        href="/word-to-pdf"
+        class="rounded-xl border p-4 text-left transition hover:scale-[1.02]"
+        style="border-color: var(--color-border)"
+      >
+        <div class="font-semibold">Word → PDF</div>
+        <div class="mt-1 text-xs" style="color: var(--color-muted)">
+          .docx → .pdf
+        </div>
+      </a>
+      <a
+        href="/pdf-to-word"
+        class="rounded-xl border p-4 text-left transition hover:scale-[1.02]"
+        style="border-color: var(--color-border)"
+      >
+        <div class="font-semibold">PDF → Word</div>
+        <div class="mt-1 text-xs" style="color: var(--color-muted)">
+          .pdf → .docx
+        </div>
+      </a>
+    </div>
+
+    <p class="mt-10">
+      <a
+        href="/"
+        class="inline-block rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+        style="background: var(--color-accent)"
+      >
+        ← Back to home
+      </a>
+    </p>
+  </section>
+</BaseLayout>

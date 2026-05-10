@@ -12,6 +12,7 @@ const {
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const ogImage = new URL('/favicon.svg', Astro.site).href;
 ---
 
 <!doctype html>
@@ -22,27 +23,33 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
     <meta name="generator" content={Astro.generator} />
     <meta name="description" content={description} />
     <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#f97316" />
+    <meta name="color-scheme" content="light dark" />
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:site_name" content="a → b" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
 
     <title>{title}</title>
+
+    <!-- Service worker registration. Skipped on localhost (see register-sw.js). -->
+    <script src="/register-sw.js" defer></script>
   </head>
   <body class="flex min-h-screen flex-col">
-    <header
-      class="border-b"
-      style="border-color: var(--color-border)"
-    >
+    <header class="border-b" style="border-color: var(--color-border)">
       <nav class="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
         <a href="/" class="text-lg font-bold tracking-tight">
           a <span style="color: var(--color-accent)">→</span> b
@@ -59,25 +66,40 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href;
       <slot />
     </main>
 
-    <footer
-      class="mt-12 border-t"
-      style="border-color: var(--color-border)"
-    >
+    <footer class="mt-12 border-t" style="border-color: var(--color-border)">
       <div
-        class="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4 px-4 py-6 text-sm"
+        class="mx-auto max-w-4xl px-4 py-6 text-sm"
         style="color: var(--color-muted)"
       >
-        <span>
-          © {new Date().getFullYear()} a → b · Free forever ·{' '}
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <span>No uploads. No tracking. No ads.</span>
           <a
-            href="https://github.com/rosscyking1115/a-to-b"
-            class="underline hover:no-underline"
+            href="https://ko-fi.com/atob"
+            target="_blank"
             rel="noopener"
+            class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition hover:opacity-90"
+            style="background: var(--color-accent-soft); color: var(--color-accent)"
           >
-            Open source
+            <span aria-hidden="true">☕</span>
+            <span>Buy me a coffee</span>
           </a>
-        </span>
-        <span>No uploads. No tracking. No ads.</span>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-4 text-xs">
+          <span>
+            © {new Date().getFullYear()} a → b · Free forever ·
+            <a
+              href="https://github.com/rosscyking1115/a-to-b"
+              class="underline hover:no-underline"
+              rel="noopener"
+            >
+              Open source
+            </a>
+          </span>
+          <span>
+            <a href="/privacy" class="underline hover:no-underline">Privacy</a> ·
+            <a href="/about" class="underline hover:no-underline">About</a>
+          </span>
+        </div>
       </div>
     </footer>
   </body>

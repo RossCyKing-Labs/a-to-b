@@ -1,8 +1,24 @@
-# AtoB — Project Plan
+# a → b — Project Plan
 
 A privacy-first, free file conversion web app. Files never leave the user's device. No ads, no upload limits, no tracking. Optional "Buy me a coffee" tip jar.
 
-> **Working name:** AtoB. Final name TBD (a few candidates at the bottom of this doc).
+> **Working name:** a → b. Final name TBD (a few candidates at the bottom of this doc).
+>
+> **Live:** [a-to-b.rosscyking1115.workers.dev](https://a-to-b.rosscyking1115.workers.dev)
+>
+> **Repo:** [github.com/rosscyking1115/a-to-b](https://github.com/rosscyking1115/a-to-b)
+
+## Status — May 2026
+
+| Phase | What | Status |
+|---|---|---|
+| 0 | Foundations: Astro 5 + Tailwind 4 + TS strict, Cloudflare Pages, strict CSP, sitemap | ✅ Shipped |
+| 1 | Image converter: PNG ↔ JPEG ↔ WebP, multi-file batch, magic-byte validation | ✅ Shipped |
+| 2 | Word → PDF via mammoth + browser print, in-page preview, selectable text output | ✅ Shipped |
+| 3 | PDF → Word via pdf.js + docx, paragraph reconstruction, heading/list detection | ✅ Shipped |
+| 3.5 | Bold/italic + hyperlink preservation in PDF→Word output | ✅ Shipped |
+| 4 | PWA (offline + installable), 404 page, Buy Me a Coffee link | ✅ Shipped |
+| 5+ | Future formats (PDF tools, audio, video, etc.) | Deferred until users ask |
 
 ---
 
@@ -248,15 +264,52 @@ Cost to run: $0 on Cloudflare Pages free tier. Domain: $10–15/year if/when you
 
 ---
 
-## 10. Immediate Next Steps
+## 10. Pre-launch Checklist
 
-When you're ready to start building:
+Things to do before sharing this with the world:
 
-1. Confirm or pick a final name (drives repo name, domain, manifest).
-2. Initialize the Astro project — I can run `pnpm create astro@latest` for you and wire in Tailwind, TypeScript, the `_headers` CSP file, and the GitHub Actions deploy.
-3. Build the `<FileDrop>` component once — it'll be reused across every converter.
-4. Ship Phase 1 (image conversions) and let it bake for a week before starting Phase 2. Real usage surfaces issues no plan can predict.
+**Domain & branding** *(optional — works without these but looks more professional)*
+- [ ] Decide on final name (current `a-to-b` works fine on `.workers.dev`; alternatives in §8)
+- [ ] Buy custom domain (if desired) — `.app` or `.tools` are good options for privacy tools (~$15/yr)
+- [ ] Custom domain → Cloudflare Workers (settings → custom domains)
+- [ ] When custom domain is live, set `workers_dev: false` in `wrangler.jsonc` so the workers.dev URL stops being publicly indexable
+- [ ] Update `site` in `astro.config.mjs` to the custom domain
+
+**PWA polish**
+- [ ] Generate 192×192 and 512×512 PNG icons from `favicon.svg` (improves install on Android Chrome)
+- [ ] Add a real OG image (1200×630 PNG) — current uses the favicon, fine but small in social previews
+- [ ] Test "Add to Home Screen" on iOS and Android
+- [ ] Test offline mode: load the site, kill internet, refresh — should still work
+
+**Tip jar**
+- [ ] Create Ko-fi or Buy Me a Coffee account
+- [ ] Update the URL in `BaseLayout.astro` (currently placeholder `https://ko-fi.com/atob`)
+
+**Final QA**
+- [ ] Run Lighthouse on each page — target 95+ Performance, 100 Accessibility, 100 Best Practices, 100 SEO
+- [ ] Test on iOS Safari, Chrome Android, Firefox, Edge
+- [ ] Test the privacy claim: open Network tab in incognito, drop a file, convert, screenshot the empty Network tab as a marketing asset
+- [ ] Try at least 5 real-world PDFs through PDF→Word and document any quality issues
+- [ ] Write a launch announcement (HN Show post, Reddit r/privacy, r/selfhosted)
+
+**Launch channels** *(in priority order)*
+1. Personal network (friends, work Slack) — early bug reports without traffic spike
+2. r/privacy or r/PrivacyTools subreddit — natural audience
+3. Hacker News Show HN — title pattern: "Show HN: a → b — Free file converter that runs in your browser"
+4. Product Hunt (privacy-tools category)
+5. Indie Hackers
+6. Twitter/X with screenshot of empty Network tab
+
+## 11. After launch
+
+When real users start showing up, watch for:
+
+- **PDF→Word quality complaints** — most likely first feedback. Heuristics may need tuning per real failure cases.
+- **File size limits** — large PDFs may hit browser memory limits. Add a warning above ~50 MB.
+- **Format requests** — likely top asks: HEIC→JPEG (Apple), MOV→MP4, MP3↔WAV, CSV↔XLSX, JPG→PDF, PDF merge/split. Add what people ask for, not what we guess.
+- **Accessibility issues** — screen-reader users may report problems we missed. Take seriously.
+- **Bug reports** — set up GitHub Issues templates so reports come in structured.
 
 ---
 
-*Plan version: v1 — May 10, 2026.*
+*Plan version: v2 — May 10, 2026. All four planned phases shipped.*

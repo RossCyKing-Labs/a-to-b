@@ -1,0 +1,43 @@
+{
+  "name": "a → b · privacy-first file converter",
+  "short_name": "a → b",
+  "description": "A free file converter that runs entirely in your browser. Files never leave your device.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fafaf9",
+  "theme_color": "#f97316",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Convert images",
+      "url": "/image",
+      "description": "Convert PNG, JPEG, WebP"
+    },
+    {
+      "name": "Word to PDF",
+      "url": "/word-to-pdf",
+      "description": "Convert .docx to .pdf"
+    },
+    {
+      "name": "PDF to Word",
+      "url": "/pdf-to-word",
+      "description": "Convert .pdf to .docx"
+    }
+  ]
+}
