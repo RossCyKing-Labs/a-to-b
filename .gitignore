@@ -39,6 +39,9 @@ Thumbs.db
 # Coverage / test
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
+.playwright/
 
 # Cache
 .cache/

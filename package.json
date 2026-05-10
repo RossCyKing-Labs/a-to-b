@@ -13,14 +13,20 @@
     "check": "astro check",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "deploy": "pnpm run build && wrangler deploy"
+    "deploy": "pnpm run build && wrangler deploy",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:all": "pnpm test:run && pnpm test:e2e"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
     "@astrojs/react": "^4.2.0",
     "@astrojs/sitemap": "^3.2.0",
     "@tailwindcss/vite": "^4.0.0",
-    "astro": "^5.1.0",
+    "astro": "^5.9.0",
     "docx": "^9.0.0",
     "mammoth": "^1.8.0",
     "pdfjs-dist": "^4.10.0",
@@ -30,11 +36,19 @@
     "typescript": "^5.7.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "@vitest/ui": "^3.0.0",
+    "jsdom": "^25.0.0",
     "prettier": "^3.4.0",
     "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-tailwindcss": "^0.6.9",
+    "vitest": "^3.0.0",
     "wrangler": "^4.0.0"
   },
   "packageManager": "pnpm@9.15.0",
