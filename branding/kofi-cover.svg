@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 540" width="1920" height="540">
+  <rect width="1920" height="540" fill="#fafaf9"/>
+  <text x="960" y="200" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="96" font-weight="800" fill="#18181b" letter-spacing="-3">Convert files.</text>
+  <text x="960" y="305" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="96" font-weight="800" fill="#f97316" letter-spacing="-3">Privately.</text>
+  <text x="960" y="375" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="32" font-weight="400" fill="#71717a">A free file converter that runs entirely in your browser.</text>
+  <text x="960" y="420" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="32" font-weight="400" fill="#71717a">No uploads. No tracking. No ads.</text>
+</svg>
