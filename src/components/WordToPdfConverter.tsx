@@ -258,23 +258,6 @@ export default function WordToPdfConverter() {
             className="docx-preview bg-white p-8 text-black"
             dangerouslySetInnerHTML={{ __html: previewItem.html }}
           />
-          <style>{`
-            .docx-preview { font-family: Georgia, 'Times New Roman', serif; line-height: 1.5; }
-            .docx-preview h1, .docx-preview h2, .docx-preview h3, .docx-preview h4 {
-              font-family: -apple-system, sans-serif;
-              margin-top: 1.2em;
-            }
-            .docx-preview h1 { font-size: 1.7rem; }
-            .docx-preview h2 { font-size: 1.3rem; }
-            .docx-preview h3 { font-size: 1.1rem; }
-            .docx-preview p { margin: 0 0 0.8em; }
-            .docx-preview table { border-collapse: collapse; margin: 1em 0; width: 100%; }
-            .docx-preview td, .docx-preview th { border: 1px solid #aaa; padding: 6px 10px; text-align: left; }
-            .docx-preview img { max-width: 100%; height: auto; }
-            .docx-preview blockquote { margin: 1em 1.5em; padding-left: 0.8em; border-left: 3px solid #888; color: #444; font-style: italic; }
-            .docx-preview ul, .docx-preview ol { padding-left: 1.5em; }
-            .docx-preview a { color: #0a58ca; }
-          `}</style>
         </section>
       )}
     </div>
