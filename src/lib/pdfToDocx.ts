@@ -227,9 +227,12 @@ export async function pdfToDocx(file: File): Promise<PdfConversionResult> {
 
   // Classify and build docx paragraphs
   let headingCount = 0;
+  // docx exports HeadingLevel as a const object, not a type — derive the type
+  // of its values for our local variable.
+  type HeadingLevelValue = (typeof HeadingLevel)[keyof typeof HeadingLevel];
   const docParas: Paragraph[] = paragraphs.map((p) => {
     const ratio = p.fontSize / (medianFontSize || p.fontSize);
-    let heading: HeadingLevel | undefined;
+    let heading: HeadingLevelValue | undefined;
     if (ratio >= 1.6) heading = HeadingLevel.HEADING_1;
     else if (ratio >= 1.35) heading = HeadingLevel.HEADING_2;
     else if (ratio >= 1.18) heading = HeadingLevel.HEADING_3;
