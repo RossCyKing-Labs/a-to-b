@@ -324,14 +324,15 @@ Things to do before sharing this with the world:
 - [ ] Update `site` in `astro.config.mjs` to the custom domain
 
 **PWA polish**
-- [ ] Generate 192×192 and 512×512 PNG icons from `favicon.svg` (improves install on Android Chrome)
-- [ ] Add a real OG image (1200×630 PNG) — current uses the favicon, fine but small in social previews
+- [x] Generate 192×192 and 512×512 PNG icons from `favicon.svg`
+- [x] Add a real OG image (1200×630 PNG with branded headline)
+- [x] Add `apple-touch-icon` for iOS home screen
 - [ ] Test "Add to Home Screen" on iOS and Android
 - [ ] Test offline mode: load the site, kill internet, refresh — should still work
 
 **Tip jar**
-- [ ] Create Ko-fi or Buy Me a Coffee account
-- [ ] Update the URL in `BaseLayout.astro` (currently placeholder `https://ko-fi.com/atob`)
+- [x] Create Ko-fi account (ko-fi.com/rosscyking)
+- [x] Update the URL in `BaseLayout.astro`
 
 **Final QA**
 - [ ] Run Lighthouse on each page — target 95+ Performance, 100 Accessibility, 100 Best Practices, 100 SEO
