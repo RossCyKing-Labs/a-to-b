@@ -1,13 +1,21 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('homepage', () => {
-  test('loads with the headline and three converter cards', async ({ page }) => {
+  test('loads with the headline and the three live converter cards', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle(/a → b/);
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Convert files');
-    await expect(page.getByRole('link', { name: /^Image/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^Image converter/ })).toBeVisible();
     await expect(page.getByRole('link', { name: /^Word → PDF/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: /^PDF → Word/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^Compress PDF/ })).toBeVisible();
+  });
+
+  test('removed tool routes redirect home (smoke test)', async ({ page }) => {
+    // We rolled the surface area back to 3 tools while polishing fidelity.
+    // The old routes still exist as redirects to the homepage so any stale
+    // bookmarks / shared links don't 404.
+    await page.goto('/merge-pdf');
+    await expect(page).toHaveURL(/\/$/);
   });
 
   test('footer Buy me a coffee link points to the right Ko-fi page', async ({ page }) => {

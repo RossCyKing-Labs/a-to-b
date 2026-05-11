@@ -5,7 +5,6 @@ interface Tool {
   title: string;
   formats: string;
   href: string;
-  ready: boolean;
 }
 
 interface Category {
@@ -19,27 +18,21 @@ const categories: Category[] = [
     title: 'Image',
     description: 'Convert between common image formats.',
     tools: [
-      { title: 'Image converter', formats: 'PNG · JPEG · WebP', href: '/image', ready: true },
+      { title: 'Image converter', formats: 'PNG · JPEG · WebP', href: '/image' },
     ],
   },
   {
     title: 'Document',
-    description: 'Word and PDF, both directions.',
+    description: 'Word to PDF with formatting preserved.',
     tools: [
-      { title: 'Word → PDF', formats: '.docx → .pdf', href: '/word-to-pdf', ready: true },
-      { title: 'PDF → Word', formats: '.pdf → .docx', href: '/pdf-to-word', ready: true },
+      { title: 'Word → PDF', formats: '.docx → .pdf', href: '/word-to-pdf' },
     ],
   },
   {
     title: 'PDF tools',
     description: 'Reshape PDFs without ever uploading them.',
     tools: [
-      { title: 'Merge PDF', formats: 'Combine into one', href: '/merge-pdf', ready: true },
-      { title: 'Split PDF', formats: 'One page per file', href: '/split-pdf', ready: true },
-      { title: 'JPG → PDF', formats: 'Images to PDF', href: '/jpg-to-pdf', ready: true },
-      { title: 'PDF → JPG', formats: 'Page as image', href: '/pdf-to-jpg', ready: true },
-      { title: 'Rotate PDF', formats: '90° · 180° · 270°', href: '/rotate-pdf', ready: true },
-      { title: 'Compress PDF', formats: 'Shrink file size', href: '/compress-pdf', ready: true },
+      { title: 'Compress PDF', formats: 'Shrink file size', href: '/compress-pdf' },
     ],
   },
 ];
@@ -66,36 +59,21 @@ const categories: Category[] = [
           </p>
         </div>
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {cat.tools.map((tool) =>
-            tool.ready ? (
-              <a
-                href={tool.href}
-                class="block rounded-xl border p-5 transition hover:scale-[1.02] hover:shadow-sm"
-                style="border-color: var(--color-border)"
-              >
-                <h3 class="mb-1 font-semibold">{tool.title}</h3>
-                <p class="text-sm" style="color: var(--color-muted)">
-                  {tool.formats}
-                </p>
-                <p class="mt-3 text-xs font-medium" style="color: var(--color-accent)">
-                  Open →
-                </p>
-              </a>
-            ) : (
-              <article
-                class="rounded-xl border p-5"
-                style="border-color: var(--color-border); opacity: 0.55"
-              >
-                <h3 class="mb-1 font-semibold">{tool.title}</h3>
-                <p class="text-sm" style="color: var(--color-muted)">
-                  {tool.formats}
-                </p>
-                <p class="mt-3 text-xs" style="color: var(--color-muted)">
-                  Coming soon
-                </p>
-              </article>
-            ),
-          )}
+          {cat.tools.map((tool) => (
+            <a
+              href={tool.href}
+              class="block rounded-xl border p-5 transition hover:scale-[1.02] hover:shadow-sm"
+              style="border-color: var(--color-border)"
+            >
+              <h3 class="mb-1 font-semibold">{tool.title}</h3>
+              <p class="text-sm" style="color: var(--color-muted)">
+                {tool.formats}
+              </p>
+              <p class="mt-3 text-xs font-medium" style="color: var(--color-accent)">
+                Open →
+              </p>
+            </a>
+          ))}
         </div>
       </section>
     ))
@@ -120,5 +98,15 @@ const categories: Category[] = [
         No paywalls. No file-size limits. Tip jar if you'd like to support the project.
       </p>
     </div>
+  </section>
+
+  <section class="mt-16 rounded-xl border p-5 text-sm" style="border-color: var(--color-border)">
+    <h2 class="mb-2 font-semibold">More tools coming back soon</h2>
+    <p style="color: var(--color-muted)">
+      We're temporarily focused on perfecting Word → PDF before we bring back Merge, Split,
+      Rotate, JPG ↔ PDF, and PDF → Word. Bookmark
+      <a href="https://github.com/rosscyking1115/a-to-b" class="underline hover:no-underline" rel="noopener">the repo</a>
+      to follow progress.
+    </p>
   </section>
 </BaseLayout>

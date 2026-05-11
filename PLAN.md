@@ -18,8 +18,16 @@ A privacy-first, free file conversion web app. Files never leave the user's devi
 | 3 | PDF → Word via pdf.js + docx, paragraph reconstruction, heading/list detection | ✅ Shipped |
 | 3.5 | Bold/italic + hyperlink preservation in PDF→Word output | ✅ Shipped |
 | 4 | PWA (offline + installable), 404 page, Buy Me a Coffee link | ✅ Shipped |
-| 5 | Core PDF toolkit: Merge, Split, JPG↔PDF, Rotate, Compress | ✅ Shipped |
-| 6+ | OCR, security tools, office adjacent | Deferred |
+| 5 | Core PDF toolkit: Merge, Split, JPG↔PDF, Rotate, Compress | ⏸ Rolled back (only Compress kept) |
+| 5.1 | Word→PDF fidelity overhaul (mammoth → docx-preview + font fallback chains) | ✅ Shipped |
+| 6+ | Restore PDF tools + PDF→Word; OCR; security tools | Deferred |
+
+**Current live tools (May 11, 2026):**
+1. Image converter — PNG ↔ JPEG ↔ WebP
+2. Word → PDF (high fidelity via docx-preview)
+3. Compress PDF
+
+PDF→Word, Merge, Split, JPG↔PDF, Rotate are temporarily removed while we perfect Word→PDF fidelity. Old URLs still resolve via redirect to homepage so no broken links.
 
 ---
 
@@ -361,4 +369,4 @@ When real users start showing up, watch for:
 
 ---
 
-*Plan version: v4 — May 10, 2026. Phases 0–5 shipped.*
+*Plan version: v5 — May 11, 2026. 3 tools live; Phase 5 PDF batch rolled back pending Word→PDF perfection.*
