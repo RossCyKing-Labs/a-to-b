@@ -6,9 +6,7 @@ import tailwindcss from '@tailwindcss/vite';
 // https://astro.build/config
 export default defineConfig({
   // Public origin used for canonical URLs, OG tags, and the sitemap.
-  // Swap this to a custom domain once you have one — until then we point at
-  // the Cloudflare Workers free subdomain.
-  site: 'https://a-to-b.rosscyking1115.workers.dev',
+  site: 'https://fromatob.app',
   integrations: [react(), sitemap()],
   vite: {
     plugins: [tailwindcss()],
