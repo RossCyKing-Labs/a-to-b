@@ -21,14 +21,19 @@
  * Bump CACHE_VERSION when shipping changes that require old caches gone.
  */
 
-const CACHE_VERSION = 'a-to-b-v9';
+const CACHE_VERSION = 'a-to-b-v10';
 
 const PRECACHE = [
   '/',
   '/about',
   '/privacy',
   '/image',
-  '/word-to-pdf',
+  '/merge-pdf',
+  '/split-pdf',
+  '/jpg-to-pdf',
+  '/pdf-to-jpg',
+  '/pdf-to-word',
+  '/rotate-pdf',
   '/compress-pdf',
   '/favicon.svg',
   '/icon-192.png',
