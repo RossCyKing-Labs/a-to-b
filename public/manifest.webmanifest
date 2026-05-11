@@ -36,14 +36,19 @@
       "description": "PNG, JPEG, WebP"
     },
     {
-      "name": "Word to PDF",
-      "url": "/word-to-pdf",
-      "description": "Convert .docx to PDF"
+      "name": "Merge PDF",
+      "url": "/merge-pdf",
+      "description": "Combine PDFs into one"
     },
     {
       "name": "Compress PDF",
       "url": "/compress-pdf",
       "description": "Shrink PDF file size"
+    },
+    {
+      "name": "Split PDF",
+      "url": "/split-pdf",
+      "description": "One PDF per page"
     }
   ]
 }

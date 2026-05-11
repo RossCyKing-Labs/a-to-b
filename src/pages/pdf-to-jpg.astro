@@ -1,4 +1,34 @@
 ---
-// Temporarily removed; see comment in merge-pdf.astro.
-return Astro.redirect('/');
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import PdfToJpgConverter from '~/components/PdfToJpgConverter';
 ---
+
+<BaseLayout
+  title="PDF to JPG · a → b"
+  description="Render every page of a PDF as a JPG in your browser. Files never leave your device."
+>
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">PDF → JPG</h1>
+    <p class="mt-2 text-lg" style="color: var(--color-muted)">
+      Render every page of a PDF as a JPG image — entirely in your browser.
+    </p>
+  </header>
+
+  <PdfToJpgConverter client:load />
+
+  <aside
+    class="mt-12 rounded-xl border p-6"
+    style="border-color: var(--color-border); background: var(--color-accent-soft)"
+  >
+    <h2
+      class="mb-2 text-xs font-semibold tracking-wider uppercase"
+      style="color: var(--color-accent)"
+    >
+      How this works
+    </h2>
+    <p class="text-sm leading-relaxed">
+      Each page is rendered to a canvas via <code>pdf.js</code>, then exported as a JPG with your
+      chosen quality. Useful for sharing single pages as images. Your file never leaves your device.
+    </p>
+  </aside>
+</BaseLayout>

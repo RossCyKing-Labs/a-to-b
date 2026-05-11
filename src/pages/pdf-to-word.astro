@@ -1,5 +1,10 @@
 ---
-// Temporarily removed while we improve Word→PDF fidelity. The PDF→Word
-// component + implementation remain in the codebase for future restoration.
+// PDF→Word dropped from the live surface area for the same reasons as
+// Word→PDF: imperfect quality + good free alternatives exist (Microsoft Word's
+// "Open PDF" feature, Google Docs's import). We prefer to ship tools that are
+// either 100% perfect or where we have no good free competitor.
+//
+// The component + library code remain in the repo for future restoration if
+// in-browser PDF text-extraction tech advances meaningfully.
 return Astro.redirect('/');
 ---

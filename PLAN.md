@@ -18,16 +18,24 @@ A privacy-first, free file conversion web app. Files never leave the user's devi
 | 3 | PDF → Word via pdf.js + docx, paragraph reconstruction, heading/list detection | ✅ Shipped |
 | 3.5 | Bold/italic + hyperlink preservation in PDF→Word output | ✅ Shipped |
 | 4 | PWA (offline + installable), 404 page, Buy Me a Coffee link | ✅ Shipped |
-| 5 | Core PDF toolkit: Merge, Split, JPG↔PDF, Rotate, Compress | ⏸ Rolled back (only Compress kept) |
-| 5.1 | Word→PDF fidelity overhaul (mammoth → docx-preview + font fallback chains) | ✅ Shipped |
-| 6+ | Restore PDF tools + PDF→Word; OCR; security tools | Deferred |
+| 5 | Core PDF toolkit: Merge, Split, JPG↔PDF, Rotate, Compress | ✅ Shipped |
+| 5.2 | Strategic pivot: drop Word→PDF, restore PDF→Word and all PDF tools | ✅ Shipped |
+| 6+ | OCR, PDF security tools, HEIC→JPEG | Deferred |
 
-**Current live tools (May 11, 2026):**
+**Strategic decision (May 11, 2026):** Word→PDF dropped from live surface. Microsoft Word and Google Docs both already convert .docx to PDF with perfect fidelity for free; we can't match that in-browser without breaking our privacy / bundle-size promises. AtoB focuses on tools where we provide unique value: image conversion and PDF manipulation where Microsoft and Google have no free alternative.
+
+**Current live tools (7):**
 1. Image converter — PNG ↔ JPEG ↔ WebP
-2. Word → PDF (high fidelity via docx-preview)
-3. Compress PDF
+2. Merge PDF
+3. Split PDF
+4. JPG → PDF
+5. PDF → JPG
+6. Rotate PDF
+7. Compress PDF (image-only recompression — **text remains selectable**)
 
-PDF→Word, Merge, Split, JPG↔PDF, Rotate are temporarily removed while we perfect Word→PDF fidelity. Old URLs still resolve via redirect to homepage so no broken links.
+**Quality:** All 7 tools are either byte-faithful (Merge, Split, Rotate) or do clean format conversion (Image, JPG→PDF, PDF→JPG, Compress). No "best-effort" or "imperfect" tools live.
+
+Word→PDF and PDF→Word both redirect to homepage. Components + libraries remain in repo for possible future restoration if browser tech improves.
 
 ---
 
@@ -369,4 +377,4 @@ When real users start showing up, watch for:
 
 ---
 
-*Plan version: v5 — May 11, 2026. 3 tools live; Phase 5 PDF batch rolled back pending Word→PDF perfection.*
+*Plan version: v7 — May 11, 2026. 7 tools live (1 image + 6 PDF). Word↔PDF both dropped; Compress PDF rewritten to preserve text selectability.*
