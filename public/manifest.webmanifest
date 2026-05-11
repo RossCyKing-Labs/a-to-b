@@ -41,14 +41,14 @@
       "description": "Combine PDFs into one"
     },
     {
-      "name": "PDF to Word",
-      "url": "/pdf-to-word",
-      "description": "Convert .pdf to editable .docx"
-    },
-    {
       "name": "Compress PDF",
       "url": "/compress-pdf",
       "description": "Shrink PDF file size"
+    },
+    {
+      "name": "Split PDF",
+      "url": "/split-pdf",
+      "description": "One PDF per page"
     }
   ]
 }

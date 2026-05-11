@@ -24,17 +24,18 @@ A privacy-first, free file conversion web app. Files never leave the user's devi
 
 **Strategic decision (May 11, 2026):** Word→PDF dropped from live surface. Microsoft Word and Google Docs both already convert .docx to PDF with perfect fidelity for free; we can't match that in-browser without breaking our privacy / bundle-size promises. AtoB focuses on tools where we provide unique value: image conversion and PDF manipulation where Microsoft and Google have no free alternative.
 
-**Current live tools:**
+**Current live tools (7):**
 1. Image converter — PNG ↔ JPEG ↔ WebP
 2. Merge PDF
 3. Split PDF
 4. JPG → PDF
 5. PDF → JPG
-6. PDF → Word (best-effort; text-faithful, layout-lossy)
-7. Rotate PDF
-8. Compress PDF
+6. Rotate PDF
+7. Compress PDF (image-only recompression — **text remains selectable**)
 
-Word→PDF page redirects to homepage; component + docx-preview library remain in repo for possible future restoration if browser-side tech reaches viable fidelity.
+**Quality:** All 7 tools are either byte-faithful (Merge, Split, Rotate) or do clean format conversion (Image, JPG→PDF, PDF→JPG, Compress). No "best-effort" or "imperfect" tools live.
+
+Word→PDF and PDF→Word both redirect to homepage. Components + libraries remain in repo for possible future restoration if browser tech improves.
 
 ---
 
@@ -376,4 +377,4 @@ When real users start showing up, watch for:
 
 ---
 
-*Plan version: v6 — May 11, 2026. 8 tools live (1 image + 7 PDF). Word→PDF deliberately dropped (Word and Google Docs already do this perfectly for free).*
+*Plan version: v7 — May 11, 2026. 7 tools live (1 image + 6 PDF). Word↔PDF both dropped; Compress PDF rewritten to preserve text selectability.*

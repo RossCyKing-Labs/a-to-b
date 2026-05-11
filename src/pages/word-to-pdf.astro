@@ -1,10 +1,9 @@
 ---
-// Word→PDF dropped from the live surface area. Microsoft Word and Google Docs
-// both already convert .docx to PDF with perfect fidelity for free — we can't
-// match that in-browser without 150 MB+ of WASM. Better to focus AtoB on tools
-// where we provide unique value (image conversion, PDF manipulation).
+// Word→PDF dropped from the live surface area. Microsoft Word and Google
+// Docs both convert .docx → PDF with perfect fidelity, for free. We can't
+// match that in-browser without breaking our privacy promise. Use Word's
+// File → Save As → PDF or Google Docs's File → Download → PDF.
 //
-// The component + library code remain in the repo for future restoration if
-// browser-side conversion tech improves to viable fidelity.
+// The component + library code remain in the repo for future restoration.
 return Astro.redirect('/');
 ---

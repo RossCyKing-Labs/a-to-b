@@ -23,13 +23,12 @@ const categories: Category[] = [
   },
   {
     title: 'PDF tools',
-    description: 'Reshape and convert PDFs without ever uploading them.',
+    description: 'Reshape PDFs without ever uploading them.',
     tools: [
       { title: 'Merge PDF', formats: 'Combine into one', href: '/merge-pdf' },
       { title: 'Split PDF', formats: 'One page per file', href: '/split-pdf' },
       { title: 'JPG → PDF', formats: 'Images to PDF', href: '/jpg-to-pdf' },
       { title: 'PDF → JPG', formats: 'Page as image', href: '/pdf-to-jpg' },
-      { title: 'PDF → Word', formats: 'Editable .docx', href: '/pdf-to-word' },
       { title: 'Rotate PDF', formats: '90° · 180° · 270°', href: '/rotate-pdf' },
       { title: 'Compress PDF', formats: 'Shrink file size', href: '/compress-pdf' },
     ],
@@ -103,12 +102,12 @@ const categories: Category[] = [
     class="mt-16 rounded-xl border p-5 text-sm"
     style="border-color: var(--color-border)"
   >
-    <h2 class="mb-2 font-semibold">Why no Word → PDF?</h2>
+    <h2 class="mb-2 font-semibold">Why no Word ↔ PDF?</h2>
     <p style="color: var(--color-muted)">
-      Microsoft Word and Google Docs both already convert <code>.docx</code> to PDF with perfect
-      fidelity, for free. We can't match that quality in the browser without giving up our privacy
-      promise. Use Word's <strong>Save As → PDF</strong> or Google Docs's <strong>Download →
-      PDF</strong> — both work great.
+      Microsoft Word and Google Docs both already handle <code>.docx</code> ↔ PDF conversion with
+      perfect fidelity, for free. We can't match that quality in the browser without giving up our
+      privacy promise. Use Word's <strong>Save As → PDF</strong> or Google Docs's <strong>File →
+      Download → PDF</strong> — both work great.
     </p>
   </section>
 </BaseLayout>

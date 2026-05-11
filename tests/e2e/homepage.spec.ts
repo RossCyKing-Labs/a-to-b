@@ -10,16 +10,17 @@ test.describe('homepage', () => {
     await expect(page.getByRole('link', { name: /^Split PDF/ })).toBeVisible();
     await expect(page.getByRole('link', { name: /^JPG → PDF/ })).toBeVisible();
     await expect(page.getByRole('link', { name: /^PDF → JPG/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: /^PDF → Word/ })).toBeVisible();
     await expect(page.getByRole('link', { name: /^Rotate PDF/ })).toBeVisible();
     await expect(page.getByRole('link', { name: /^Compress PDF/ })).toBeVisible();
   });
 
-  test('Word→PDF route redirects home', async ({ page }) => {
-    // Word→PDF is dropped from the live surface. Microsoft Word and Google Docs
-    // both already provide free, high-fidelity .docx→PDF; we can't match that
-    // in-browser without giving up privacy. Old shared links redirect home.
+  test('Word↔PDF routes redirect home', async ({ page }) => {
+    // Word→PDF and PDF→Word are dropped from the live surface. Microsoft Word
+    // and Google Docs already handle these for free; we focus on tools where
+    // no good free private alternative exists. Old shared links redirect home.
     await page.goto('/word-to-pdf');
+    await expect(page).toHaveURL(/\/$/);
+    await page.goto('/pdf-to-word');
     await expect(page).toHaveURL(/\/$/);
   });
 
