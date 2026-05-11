@@ -1,4 +1,34 @@
 ---
-// Temporarily removed; see comment in merge-pdf.astro.
-return Astro.redirect('/');
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import JpgToPdfConverter from '~/components/JpgToPdfConverter';
 ---
+
+<BaseLayout
+  title="JPG to PDF · a → b"
+  description="Combine JPG, PNG, and WebP images into a single PDF in your browser. Files never leave your device."
+>
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">JPG → PDF</h1>
+    <p class="mt-2 text-lg" style="color: var(--color-muted)">
+      Combine images into a single PDF — entirely in your browser.
+    </p>
+  </header>
+
+  <JpgToPdfConverter client:load />
+
+  <aside
+    class="mt-12 rounded-xl border p-6"
+    style="border-color: var(--color-border); background: var(--color-accent-soft)"
+  >
+    <h2
+      class="mb-2 text-xs font-semibold tracking-wider uppercase"
+      style="color: var(--color-accent)"
+    >
+      How this works
+    </h2>
+    <p class="text-sm leading-relaxed">
+      Each image is embedded into a new PDF page locally via <code>pdf-lib</code>. Original image
+      quality is preserved. Your files never touch a server.
+    </p>
+  </aside>
+</BaseLayout>

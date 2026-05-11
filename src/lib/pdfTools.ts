@@ -17,7 +17,7 @@
  *  - pdfjs-dist (Apache-2): rendering pages to canvas (needed for PDF→JPG
  *    and compression). Already in the bundle from Phase 3.
  */
-import { PDFDocument, degrees } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFNumber, PDFRawStream, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
@@ -253,68 +253,153 @@ export async function pdfToJpgs(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Compress PDF (render-and-recombine)
+// Compress PDF (image-only recompression — preserves text)
 // ────────────────────────────────────────────────────────────────────────────
 
 export type CompressLevel = 'low' | 'medium' | 'high';
 
-const COMPRESS_PRESETS: Record<CompressLevel, { scale: number; quality: number }> = {
-  low: { scale: 2, quality: 0.85 }, // lightest compression, best quality
-  medium: { scale: 1.5, quality: 0.7 }, // balanced
-  high: { scale: 1, quality: 0.55 }, // aggressive
+interface CompressPreset {
+  /** JPEG re-encode quality (0–1). */
+  quality: number;
+  /** Max longest-edge dimension in pixels. Larger images get downscaled. */
+  maxDim: number;
+}
+
+const COMPRESS_PRESETS: Record<CompressLevel, CompressPreset> = {
+  low: { quality: 0.88, maxDim: 2400 }, // lightest compression, best quality
+  medium: { quality: 0.72, maxDim: 1800 }, // balanced
+  high: { quality: 0.55, maxDim: 1400 }, // aggressive
 };
 
+export interface CompressResult {
+  blob: Blob;
+  /** How many embedded images we recompressed. */
+  imagesRecompressed: number;
+  /** Whether compression actually reduced the file size. */
+  smallerThanOriginal: boolean;
+}
+
 /**
- * Compress a PDF by rendering each page to a JPEG, then assembling those
- * JPEGs into a new PDF. Effective for image-heavy PDFs; less effective (or
- * negative) for already-compressed text-only PDFs.
+ * Compress a PDF by recompressing embedded JPEG images at lower quality and
+ * downscaling oversized images. Text content, vector graphics, and the PDF's
+ * structural elements are left UNTOUCHED — text in the output remains fully
+ * selectable and searchable.
  *
- * Trade-off: text in the output is part of the page image (not selectable).
- * This is surfaced in the UI as a clear note.
+ * How well this works depends on what's inside the PDF:
+ *  - Image-heavy PDFs (scans, brochures with photos): substantial size reduction
+ *  - Text-only PDFs: little to no reduction (there's nothing to recompress)
+ *
+ * If the recompressed result is somehow larger than the input (rare — happens
+ * when images are already aggressively compressed), we return the original
+ * bytes unchanged so the user never gets a worse outcome.
  */
-export async function compressPdf(file: File, level: CompressLevel = 'medium'): Promise<Blob> {
-  const { scale, quality } = COMPRESS_PRESETS[level];
+export async function compressPdf(
+  file: File,
+  level: CompressLevel = 'medium',
+): Promise<CompressResult> {
+  const { quality, maxDim } = COMPRESS_PRESETS[level];
   const buf = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const originalSize = buf.byteLength;
+  const doc = await PDFDocument.load(buf, { ignoreEncryption: false });
 
-  const out = await PDFDocument.create();
+  const indirects = doc.context.enumerateIndirectObjects();
+  let imagesRecompressed = 0;
 
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const viewport = page.getViewport({ scale });
+  for (const [ref, obj] of indirects) {
+    if (!(obj instanceof PDFRawStream)) continue;
+    const dict = obj.dict;
 
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.ceil(viewport.width);
-    canvas.height = Math.ceil(viewport.height);
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Could not get 2D rendering context.');
+    // Image XObjects have /Subtype /Image in their dictionary
+    const subtype = dict.get(PDFName.of('Subtype'));
+    if (!subtype || subtype.toString() !== '/Image') continue;
 
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // We only handle JPEG (DCTDecode filter) — most common image format in
+    // PDFs. PNG-style (FlateDecode) images are skipped to keep the
+    // implementation focused and reliable.
+    const filter = dict.get(PDFName.of('Filter'));
+    const filterStr = filter ? filter.toString() : '';
+    if (!filterStr.includes('DCTDecode')) continue;
 
-    await page.render({ canvasContext: ctx, viewport }).promise;
+    // The raw JPEG bytes are the stream contents (since DCTDecode == JPEG)
+    const jpegBytes = obj.contents;
+    if (!jpegBytes || jpegBytes.length === 0) continue;
 
-    const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error('Failed to encode page.'))),
-        'image/jpeg',
-        quality,
-      );
-    });
+    try {
+      const blob = new Blob([jpegBytes as BlobPart], { type: 'image/jpeg' });
+      const bitmap = await createImageBitmap(blob);
 
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    const img = await out.embedJpg(bytes);
+      // Downscale if the image is bigger than maxDim along its longest edge
+      const longestEdge = Math.max(bitmap.width, bitmap.height);
+      const scale = longestEdge > maxDim ? maxDim / longestEdge : 1;
+      const targetW = Math.max(1, Math.round(bitmap.width * scale));
+      const targetH = Math.max(1, Math.round(bitmap.height * scale));
 
-    // Use original viewport dimensions for the new page so visual sizing matches.
-    const origViewport = page.getViewport({ scale: 1 });
-    const newPage = out.addPage([origViewport.width, origViewport.height]);
-    newPage.drawImage(img, {
-      x: 0,
-      y: 0,
-      width: origViewport.width,
-      height: origViewport.height,
-    });
+      let recompressed: Blob;
+      if (typeof OffscreenCanvas !== 'undefined') {
+        const canvas = new OffscreenCanvas(targetW, targetH);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('No 2D context');
+        ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+        recompressed = await canvas.convertToBlob({ type: 'image/jpeg', quality });
+      } else {
+        const canvas = document.createElement('canvas');
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('No 2D context');
+        ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+        recompressed = await new Promise<Blob>((resolve, reject) =>
+          canvas.toBlob(
+            (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
+            'image/jpeg',
+            quality,
+          ),
+        );
+      }
+
+      const newBytes = new Uint8Array(await recompressed.arrayBuffer());
+
+      // Only replace if smaller (else we'd inflate the PDF)
+      if (newBytes.length < jpegBytes.length) {
+        // Build a fresh dict carrying over everything except size-related keys
+        const newDict = doc.context.obj({}) as typeof dict;
+        for (const [key, value] of dict.entries()) {
+          newDict.set(key, value);
+        }
+        newDict.set(PDFName.of('Width'), PDFNumber.of(targetW));
+        newDict.set(PDFName.of('Height'), PDFNumber.of(targetH));
+        newDict.delete(PDFName.of('Length')); // recomputed on save
+
+        const newStream = PDFRawStream.of(newDict, newBytes);
+        doc.context.assign(ref, newStream);
+        imagesRecompressed++;
+      }
+
+      bitmap.close();
+    } catch {
+      // If a specific image can't be processed, skip it and continue
+      // with the rest. The PDF stays intact otherwise.
+      continue;
+    }
   }
 
-  return pdfBlob(await out.save());
+  // Save with object streams — packs the PDF more tightly without touching
+  // visible content
+  const bytes = await doc.save({ useObjectStreams: true });
+
+  // Safety net: if our "compressed" output is somehow larger, return the
+  // original instead so the user doesn't get a worse file.
+  if (bytes.byteLength >= originalSize) {
+    return {
+      blob: new Blob([buf as BlobPart], { type: 'application/pdf' }),
+      imagesRecompressed,
+      smallerThanOriginal: false,
+    };
+  }
+
+  return {
+    blob: pdfBlob(bytes),
+    imagesRecompressed,
+    smallerThanOriginal: true,
+  };
 }

@@ -22,16 +22,14 @@ const categories: Category[] = [
     ],
   },
   {
-    title: 'Document',
-    description: 'Word to PDF with formatting preserved.',
-    tools: [
-      { title: 'Word → PDF', formats: '.docx → .pdf', href: '/word-to-pdf' },
-    ],
-  },
-  {
     title: 'PDF tools',
     description: 'Reshape PDFs without ever uploading them.',
     tools: [
+      { title: 'Merge PDF', formats: 'Combine into one', href: '/merge-pdf' },
+      { title: 'Split PDF', formats: 'One page per file', href: '/split-pdf' },
+      { title: 'JPG → PDF', formats: 'Images to PDF', href: '/jpg-to-pdf' },
+      { title: 'PDF → JPG', formats: 'Page as image', href: '/pdf-to-jpg' },
+      { title: 'Rotate PDF', formats: '90° · 180° · 270°', href: '/rotate-pdf' },
       { title: 'Compress PDF', formats: 'Shrink file size', href: '/compress-pdf' },
     ],
   },
@@ -100,13 +98,16 @@ const categories: Category[] = [
     </div>
   </section>
 
-  <section class="mt-16 rounded-xl border p-5 text-sm" style="border-color: var(--color-border)">
-    <h2 class="mb-2 font-semibold">More tools coming back soon</h2>
+  <section
+    class="mt-16 rounded-xl border p-5 text-sm"
+    style="border-color: var(--color-border)"
+  >
+    <h2 class="mb-2 font-semibold">Why no Word ↔ PDF?</h2>
     <p style="color: var(--color-muted)">
-      We're temporarily focused on perfecting Word → PDF before we bring back Merge, Split,
-      Rotate, JPG ↔ PDF, and PDF → Word. Bookmark
-      <a href="https://github.com/rosscyking1115/a-to-b" class="underline hover:no-underline" rel="noopener">the repo</a>
-      to follow progress.
+      Microsoft Word and Google Docs both already handle <code>.docx</code> ↔ PDF conversion with
+      perfect fidelity, for free. We can't match that quality in the browser without giving up our
+      privacy promise. Use Word's <strong>Save As → PDF</strong> or Google Docs's <strong>File →
+      Download → PDF</strong> — both work great.
     </p>
   </section>
 </BaseLayout>

@@ -13,21 +13,23 @@ interface Item {
   newName?: string;
   newSize?: number;
   url?: string;
+  note?: string;
   error?: string;
 }
 
 const LEVELS: { id: CompressLevel; label: string; desc: string }[] = [
   { id: 'low', label: 'Light', desc: 'Best quality, modest reduction' },
   { id: 'medium', label: 'Balanced', desc: 'Recommended for most files' },
-  { id: 'high', label: 'Strong', desc: 'Smallest file, more visible loss' },
+  { id: 'high', label: 'Strong', desc: 'Smallest file, some image softness' },
 ];
 
 /**
- * Compress PDFs by rendering each page to a JPEG and assembling a new PDF.
- * Effective for image-heavy PDFs; modest gains on text-only files.
+ * Compress PDFs by recompressing embedded JPEG images at lower quality and
+ * downscaling oversized images. Text content, vector graphics, and structure
+ * stay untouched — output text remains selectable and searchable.
  *
- * IMPORTANT trade-off (surfaced in the UI): the output's text is rasterized,
- * so it won't be selectable or searchable.
+ * Effective for image-heavy PDFs (scans, photo-heavy docs). Text-only PDFs
+ * see minimal change (there's nothing to recompress).
  */
 export default function CompressPdfConverter() {
   const [level, setLevel] = useState<CompressLevel>('medium');
@@ -77,15 +79,28 @@ export default function CompressPdfConverter() {
       setItems((prev) => prev.map((it) => (it.id === id ? { ...it, status: 'compressing' } : it)));
 
       try {
-        const blob = await compressPdf(file, level);
+        const result = await compressPdf(file, level);
         const stem = file.name.replace(/\.pdf$/i, '');
-        const newName = `${stem}-compressed.pdf`;
-        const url = URL.createObjectURL(blob);
+        const newName = result.smallerThanOriginal
+          ? `${stem}-compressed.pdf`
+          : `${stem}.pdf`;
+        const url = URL.createObjectURL(result.blob);
         urlsRef.current.add(url);
         setItems((prev) =>
           prev.map((it) =>
             it.id === id
-              ? { ...it, status: 'done', newName, newSize: blob.size, url }
+              ? {
+                  ...it,
+                  status: 'done',
+                  newName,
+                  newSize: result.blob.size,
+                  url,
+                  note: result.smallerThanOriginal
+                    ? result.imagesRecompressed > 0
+                      ? `${result.imagesRecompressed} image${result.imagesRecompressed === 1 ? '' : 's'} recompressed`
+                      : 'Repacked for smaller size'
+                    : 'Already optimal — original returned',
+                }
               : it,
           ),
         );
@@ -147,10 +162,10 @@ export default function CompressPdfConverter() {
         className="rounded-lg border p-3 text-xs leading-relaxed"
         style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}
       >
-        Heads up: this converter renders each page to an image, then rebuilds the PDF. That makes
-        files significantly smaller for image-heavy PDFs, but <strong>text in the output won't be
-        selectable or searchable</strong>. If you need selectable text, skip Compress and use the
-        original PDF.
+        How this works: we recompress JPEG images embedded in the PDF and downscale oversized
+        ones. <strong>Text stays selectable and searchable.</strong> Most effective for PDFs
+        with photos or scans; text-only PDFs see minimal change. If our compressed output would
+        be bigger than the input, we return the original unchanged.
       </div>
 
       <FileDrop accept="application/pdf,.pdf" multiple onFiles={handleFiles}>
@@ -196,10 +211,14 @@ export default function CompressPdfConverter() {
                   </div>
                   <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
                     {it.status === 'pending' && 'Queued…'}
-                    {it.status === 'compressing' && 'Compressing…'}
-                    {it.status === 'done' &&
-                      it.newSize !== undefined &&
-                      `${formatBytes(it.originalSize)} → ${formatBytes(it.newSize)} (${sizeDelta(it.originalSize, it.newSize)})`}
+                    {it.status === 'compressing' && 'Recompressing images…'}
+                    {it.status === 'done' && it.newSize !== undefined && (
+                      <>
+                        {formatBytes(it.originalSize)} → {formatBytes(it.newSize)} (
+                        {sizeDelta(it.originalSize, it.newSize)})
+                        {it.note && <span> · {it.note}</span>}
+                      </>
+                    )}
                     {it.status === 'error' && <span style={{ color: '#dc2626' }}>{it.error}</span>}
                   </div>
                 </div>

@@ -1,4 +1,34 @@
 ---
-// Temporarily removed; see comment in merge-pdf.astro.
-return Astro.redirect('/');
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import SplitPdfConverter from '~/components/SplitPdfConverter';
 ---
+
+<BaseLayout
+  title="Split PDF · a → b"
+  description="Split a PDF into individual single-page PDFs in your browser. Files never leave your device."
+>
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Split PDF</h1>
+    <p class="mt-2 text-lg" style="color: var(--color-muted)">
+      Split one PDF into individual pages — entirely in your browser.
+    </p>
+  </header>
+
+  <SplitPdfConverter client:load />
+
+  <aside
+    class="mt-12 rounded-xl border p-6"
+    style="border-color: var(--color-border); background: var(--color-accent-soft)"
+  >
+    <h2
+      class="mb-2 text-xs font-semibold tracking-wider uppercase"
+      style="color: var(--color-accent)"
+    >
+      How this works
+    </h2>
+    <p class="text-sm leading-relaxed">
+      Each page is copied into its own single-page PDF locally. Original formatting, fonts, and
+      selectable text are preserved. Your file never leaves your device.
+    </p>
+  </aside>
+</BaseLayout>
