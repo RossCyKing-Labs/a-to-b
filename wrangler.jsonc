@@ -17,9 +17,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "a-to-b",
   "compatibility_date": "2026-05-01",
-  // Serve <name>.<account>.workers.dev — our free subdomain for now.
-  // Set to false once we attach a custom domain.
-  "workers_dev": true,
+  // Custom domain is now fromatob.app. Disable the public workers.dev URL so
+  // Google de-indexes it over time and there's only one canonical surface.
+  "workers_dev": false,
   // Auto-generate a preview URL for non-main branch deploys (handy for PRs).
   "preview_urls": true,
   "assets": {
