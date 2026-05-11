@@ -1,23 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
 import FileDrop from './FileDrop';
-import { docxToHtml, PRINT_STYLESHEET } from '~/lib/docxToHtml';
+import { isDocx, renderDocx } from '~/lib/docxRender';
 import { formatBytes } from '~/lib/format';
 
-type Status = 'pending' | 'converting' | 'ready' | 'error';
+type Status = 'pending' | 'verifying' | 'ready' | 'error';
 
 interface DocItem {
   id: string;
+  file: File;
   originalName: string;
   originalSize: number;
   status: Status;
-  html?: string;
-  warnings?: string[];
   error?: string;
 }
 
+/**
+ * Word → PDF via docx-preview + browser print dialog.
+ *
+ * Flow:
+ *   1. User drops .docx files. We magic-byte-validate each one.
+ *   2. User clicks "Preview" on a file → we render it into a visible div
+ *      using docx-preview (which preserves Word's styling).
+ *   3. User clicks "Save as PDF" → we render the same file into a hidden
+ *      iframe (with breakPages, headers, footers enabled) and trigger
+ *      the browser's print dialog. User picks "Save as PDF" as destination.
+ *
+ * The browser's print engine produces a selectable-text PDF that visually
+ * matches what docx-preview rendered.
+ */
 export default function WordToPdfConverter() {
   const [items, setItems] = useState<DocItem[]>([]);
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
   const printIframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const reset = () => {
@@ -28,65 +42,68 @@ export default function WordToPdfConverter() {
   const handleFiles = async (files: File[]) => {
     const initial: DocItem[] = files.map((file) => ({
       id: crypto.randomUUID(),
+      file,
       originalName: file.name,
       originalSize: file.size,
-      status: 'pending',
+      status: 'verifying',
     }));
     setItems((prev) => [...prev, ...initial]);
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const id = initial[i].id;
-
-      if (!isDocx(file)) {
-        setItems((prev) =>
-          prev.map((it) =>
-            it.id === id
-              ? {
+    for (const item of initial) {
+      const ok = await isDocx(item.file);
+      setItems((prev) =>
+        prev.map((it) =>
+          it.id === item.id
+            ? ok
+              ? { ...it, status: 'ready' }
+              : {
                   ...it,
                   status: 'error',
                   error: 'Only .docx files are supported. (Older .doc format is not.)',
                 }
-              : it,
-          ),
-        );
-        continue;
-      }
-
-      setItems((prev) => prev.map((it) => (it.id === id ? { ...it, status: 'converting' } : it)));
-
-      try {
-        const { html, warnings } = await docxToHtml(file);
-        setItems((prev) =>
-          prev.map((it) => (it.id === id ? { ...it, status: 'ready', html, warnings } : it)),
-        );
-        // Auto-open preview for the first newly converted file
-        setPreviewId((current) => current ?? id);
-      } catch (err) {
-        setItems((prev) =>
-          prev.map((it) =>
-            it.id === id
-              ? {
-                  ...it,
-                  status: 'error',
-                  error: err instanceof Error ? err.message : 'Conversion failed.',
-                }
-              : it,
-          ),
-        );
+            : it,
+        ),
+      );
+      if (ok && !previewId) {
+        // Auto-open preview for the first valid file
+        setPreviewId(item.id);
       }
     }
   };
 
-  /**
-   * Open the browser's native print dialog with the converted HTML.
-   * The user picks "Save as PDF" as the destination — the browser produces
-   * a real PDF with selectable text from its rendering engine.
-   */
-  const handleSaveAsPdf = (item: DocItem) => {
-    if (!item.html) return;
+  const previewItem = items.find((it) => it.id === previewId);
 
-    // Reuse a single hidden iframe across prints
+  // Render the current preview item via docx-preview when it changes.
+  useEffect(() => {
+    const container = previewRef.current;
+    if (!container || !previewItem || previewItem.status !== 'ready') return;
+
+    // Clear previous content
+    container.innerHTML = '';
+
+    let cancelled = false;
+    (async () => {
+      try {
+        await renderDocx(previewItem.file, container, undefined, { forPrint: false });
+        if (cancelled) container.innerHTML = '';
+      } catch (err) {
+        if (cancelled) return;
+        const msg = err instanceof Error ? err.message : 'Render failed.';
+        container.innerHTML = `<p style="color:#dc2626;padding:1rem;">Preview failed: ${msg}</p>`;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [previewItem]);
+
+  /**
+   * Render the file into a hidden iframe and trigger window.print().
+   * The user picks "Save as PDF" as their destination in the browser's
+   * native print dialog. The output is a real PDF with selectable text.
+   */
+  const handleSaveAsPdf = async (item: DocItem) => {
     let iframe = printIframeRef.current;
     if (!iframe) {
       iframe = document.createElement('iframe');
@@ -116,27 +133,36 @@ export default function WordToPdfConverter() {
 <head>
 <meta charset="UTF-8">
 <title>${escapeHtml(docTitle)}</title>
-<style>${PRINT_STYLESHEET}</style>
 </head>
-<body>${item.html}</body>
+<body></body>
 </html>`);
     doc.close();
 
-    // Wait for layout/fonts before triggering print
+    // Let the iframe initialize before we start writing into it.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    try {
+      await renderDocx(item.file, doc.body, doc.head, { forPrint: true });
+    } catch (err) {
+      console.error('Render for print failed:', err);
+      return;
+    }
+
     const win = iframe.contentWindow;
     if (!win) return;
-
     win.focus();
+
+    // Small delay so fonts/images settle before the print dialog snapshots.
     setTimeout(() => {
       try {
         win.print();
       } catch (err) {
         console.error('Print failed:', err);
       }
-    }, 250);
+    }, 300);
   };
 
-  // Cleanup the print iframe on unmount
+  // Cleanup hidden iframe on unmount.
   useEffect(() => {
     return () => {
       const iframe = printIframeRef.current;
@@ -147,11 +173,13 @@ export default function WordToPdfConverter() {
     };
   }, []);
 
-  const previewItem = items.find((it) => it.id === previewId);
-
   return (
     <div className="space-y-8">
-      <FileDrop accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple onFiles={handleFiles}>
+      <FileDrop
+        accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        multiple
+        onFiles={handleFiles}
+      >
         <p className="mb-2 text-lg font-medium">Drop .docx files here</p>
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
           or click to select · Word documents (.docx only)
@@ -185,23 +213,11 @@ export default function WordToPdfConverter() {
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium">{it.originalName}</div>
                       <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
-                        {it.status === 'pending' && 'Queued…'}
-                        {it.status === 'converting' && 'Reading document…'}
-                        {it.status === 'ready' && (
-                          <>
-                            {formatBytes(it.originalSize)}
-                            {it.warnings && it.warnings.length > 0 && (
-                              <>
-                                {' · '}
-                                <span title={it.warnings.join('\n')}>
-                                  {it.warnings.length} formatting note
-                                  {it.warnings.length === 1 ? '' : 's'}
-                                </span>
-                              </>
-                            )}
-                          </>
+                        {it.status === 'verifying' && 'Checking…'}
+                        {it.status === 'ready' && formatBytes(it.originalSize)}
+                        {it.status === 'error' && (
+                          <span style={{ color: '#dc2626' }}>{it.error}</span>
                         )}
-                        {it.status === 'error' && <span style={{ color: '#dc2626' }}>{it.error}</span>}
                       </div>
                     </div>
                     {it.status === 'ready' && (
@@ -232,7 +248,7 @@ export default function WordToPdfConverter() {
         </section>
       )}
 
-      {previewItem && previewItem.html && (
+      {previewItem && previewItem.status === 'ready' && (
         <section
           aria-label="Document preview"
           className="rounded-xl border"
@@ -243,7 +259,7 @@ export default function WordToPdfConverter() {
             style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}
           >
             <span>
-              Preview — this is roughly how the PDF will look. Click <strong>Save as PDF</strong> to
+              Preview — this is how the PDF will look. Click <strong>Save as PDF</strong> to
               produce the file.
             </span>
             <button
@@ -255,18 +271,14 @@ export default function WordToPdfConverter() {
             </button>
           </header>
           <div
-            className="docx-preview bg-white p-8 text-black"
-            dangerouslySetInnerHTML={{ __html: previewItem.html }}
+            ref={previewRef}
+            className="docx-preview-host overflow-auto bg-white p-4 text-black"
+            style={{ maxHeight: '70vh' }}
           />
         </section>
       )}
     </div>
   );
-}
-
-function isDocx(file: File): boolean {
-  return /\.docx$/i.test(file.name) || file.type ===
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 }
 
 function escapeHtml(s: string): string {
