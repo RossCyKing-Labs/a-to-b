@@ -21,7 +21,7 @@
  * Bump CACHE_VERSION when shipping changes that require old caches gone.
  */
 
-const CACHE_VERSION = 'a-to-b-v5';
+const CACHE_VERSION = 'a-to-b-v6';
 
 const PRECACHE = [
   '/',

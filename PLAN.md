@@ -4,7 +4,7 @@ A privacy-first, free file conversion web app. Files never leave the user's devi
 
 > **Working name:** a → b. Final name TBD (a few candidates at the bottom of this doc).
 >
-> **Live:** [a-to-b.rosscyking1115.workers.dev](https://a-to-b.rosscyking1115.workers.dev)
+> **Live:** [fromatob.app](https://fromatob.app)
 >
 > **Repo:** [github.com/rosscyking1115/a-to-b](https://github.com/rosscyking1115/a-to-b)
 
@@ -316,12 +316,12 @@ Cost to run: $0 on Cloudflare Pages free tier. Domain: $10–15/year if/when you
 
 Things to do before sharing this with the world:
 
-**Domain & branding** *(optional — works without these but looks more professional)*
-- [ ] Decide on final name (current `a-to-b` works fine on `.workers.dev`; alternatives in §8)
-- [ ] Buy custom domain (if desired) — `.app` or `.tools` are good options for privacy tools (~$15/yr)
-- [ ] Custom domain → Cloudflare Workers (settings → custom domains)
-- [ ] When custom domain is live, set `workers_dev: false` in `wrangler.jsonc` so the workers.dev URL stops being publicly indexable
-- [ ] Update `site` in `astro.config.mjs` to the custom domain
+**Domain & branding**
+- [x] Final name: a → b, served at **fromatob.app**
+- [x] Custom domain registered (Cloudflare Registrar)
+- [x] Custom domain attached to Workers project (apex + www)
+- [x] `workers_dev: false` in `wrangler.jsonc` — the old workers.dev URL is no longer publicly served
+- [x] `site:` in `astro.config.mjs` set to `https://fromatob.app`
 
 **PWA polish**
 - [x] Generate 192×192 and 512×512 PNG icons from `favicon.svg`

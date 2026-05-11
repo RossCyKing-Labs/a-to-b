@@ -112,7 +112,7 @@ Adjust to your voice. The key thing: lead with the **anti-pattern you're rejecti
 >
 > Things I'd love feedback on: PDF → Word quality on your real documents (the hardest converter), and whether the "verify privacy in DevTools" claim feels credible.
 >
-> Live: https://a-to-b.rosscyking1115.workers.dev
+> Live: https://fromatob.app
 > Repo: https://github.com/rosscyking1115/a-to-b
 
 ### Reddit r/privacy
@@ -129,7 +129,7 @@ Adjust to your voice. The key thing: lead with the **anti-pattern you're rejecti
 >
 > Free forever, no premium tier. Tip jar on Ko-fi if it saves you time, but never required.
 >
-> https://a-to-b.rosscyking1115.workers.dev
+> https://fromatob.app
 
 ### Twitter/X
 
@@ -140,7 +140,7 @@ Adjust to your voice. The key thing: lead with the **anti-pattern you're rejecti
 >
 > You can verify it: DevTools → Network tab → empty during conversion.
 >
-> Free, open source. https://a-to-b.rosscyking1115.workers.dev
+> Free, open source. https://fromatob.app
 >
 > [attach: Network tab screenshot]
 

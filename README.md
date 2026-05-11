@@ -4,7 +4,7 @@ A free, privacy-first file converter. Files never leave your device.
 
 > Converts a → b. Nothing else. No accounts. No uploads. No tracking. No ads. No limits.
 
-**Live:** [a-to-b.rosscyking1115.workers.dev](https://a-to-b.rosscyking1115.workers.dev)
+**Live:** [fromatob.app](https://fromatob.app) &nbsp;·&nbsp; [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/rosscyking)
 
 ## Status
 
@@ -41,7 +41,9 @@ Issues and PRs welcome once the repo is public. The privacy posture is non-negot
 
 ## Support
 
-If this saved you time, you can [buy me a coffee ☕](https://ko-fi.com/rosscyking). Not required, never asked twice.
+I'm Ross — I built a→b in my spare time because I was tired of file converters that upload your files to some random server. If this saved you time or your files, a coffee means a lot and helps me justify the hours.
+
+[☕ Buy me a coffee on Ko-fi](https://ko-fi.com/rosscyking)
 
 ## License
 
