@@ -64,9 +64,16 @@ test.describe('image converter', () => {
     await expect(page.getByText('Output format')).toBeVisible();
     await expect(page.getByText('Drop images here')).toBeVisible();
 
-    // JPEG is the default — drop the file via the hidden input.
+    // JPEG is the default — drop the file via the hidden input. After
+    // selection the converter now stages the file in the "Ready to convert"
+    // confirmation panel rather than starting work immediately.
     const input = page.locator('input[type="file"]').first();
     await input.setInputFiles(fixture);
+
+    // Confirmation panel appears with a "Convert file" button.
+    const confirmButton = page.getByRole('button', { name: /^convert file$/i });
+    await expect(confirmButton).toBeVisible({ timeout: 5000 });
+    await confirmButton.click();
 
     // Wait for the result row to appear with a Download link.
     const downloadLink = page.getByRole('link', { name: /^download$/i }).first();

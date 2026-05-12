@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import FileDrop from './FileDrop';
+import PendingFilesConfirmation from './PendingFilesConfirmation';
 import { isPdf, rotatePdf, type RotationDegrees } from '~/lib/pdfTools';
 import { formatBytes } from '~/lib/format';
 
@@ -27,6 +28,7 @@ const ROTATIONS: { value: RotationDegrees; label: string }[] = [
  */
 export default function RotatePdfConverter() {
   const [rotation, setRotation] = useState<RotationDegrees>(90);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const urlsRef = useRef<Set<string>>(new Set());
 
@@ -48,7 +50,29 @@ export default function RotatePdfConverter() {
     setItems([]);
   };
 
-  const handleFiles = async (files: File[]) => {
+  // Files chosen go into a "pending" queue first — they're not rotated
+  // until the user clicks Confirm. Lets the user pick the rotation angle
+  // after staging the files.
+  const handleSelect = (files: File[]) => {
+    if (files.length === 0) return;
+    setPendingFiles((prev) => [...prev, ...files]);
+  };
+
+  const handleCancel = () => {
+    setPendingFiles([]);
+  };
+
+  const handleConfirm = async () => {
+    if (pendingFiles.length === 0) return;
+    // Snapshot rotation at confirm time so changing the radio later
+    // doesn't affect already-queued files.
+    const rotationToUse = rotation;
+    const files = pendingFiles;
+    setPendingFiles([]);
+    await rotateFiles(files, rotationToUse);
+  };
+
+  const rotateFiles = async (files: File[], rotationToUse: RotationDegrees) => {
     const initial: Item[] = files.map((file) => ({
       id: crypto.randomUUID(),
       originalName: file.name,
@@ -75,9 +99,9 @@ export default function RotatePdfConverter() {
       setItems((prev) => prev.map((it) => (it.id === id ? { ...it, status: 'rotating' } : it)));
 
       try {
-        const blob = await rotatePdf(file, rotation);
+        const blob = await rotatePdf(file, rotationToUse);
         const stem = file.name.replace(/\.pdf$/i, '');
-        const newName = `${stem}-rotated-${rotation}.pdf`;
+        const newName = `${stem}-rotated-${rotationToUse}.pdf`;
         const url = URL.createObjectURL(blob);
         urlsRef.current.add(url);
         setItems((prev) =>
@@ -98,6 +122,8 @@ export default function RotatePdfConverter() {
       }
     }
   };
+
+  const rotationLabel = ROTATIONS.find((r) => r.value === rotation)?.label ?? `${rotation}°`;
 
   const inProgress = items.filter(
     (it) => it.status === 'pending' || it.status === 'rotating',
@@ -138,12 +164,24 @@ export default function RotatePdfConverter() {
         </div>
       </fieldset>
 
-      <FileDrop accept="application/pdf,.pdf" multiple onFiles={handleFiles}>
-        <p className="mb-2 text-lg font-medium">Drop PDFs here</p>
-        <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-          or click to select · multiple files OK
-        </p>
-      </FileDrop>
+      {pendingFiles.length === 0 ? (
+        <FileDrop accept="application/pdf,.pdf" multiple onFiles={handleSelect}>
+          <p className="mb-2 text-lg font-medium">Drop PDFs here</p>
+          <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
+            or click to select · multiple files OK
+          </p>
+        </FileDrop>
+      ) : (
+        <PendingFilesConfirmation
+          files={pendingFiles}
+          verb="rotate"
+          badge={rotationLabel}
+          hint="Change the rotation above before confirming if you want a different angle."
+          disabled={inProgress > 0}
+          onConfirm={handleConfirm}
+          onCancel={handleCancel}
+        />
+      )}
 
       {items.length > 0 && (
         <section aria-live="polite">
