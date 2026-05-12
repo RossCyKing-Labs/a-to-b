@@ -10,7 +10,7 @@ import BaseLayout from '~/layouts/BaseLayout.astro';
   <div class="space-y-6 text-base leading-relaxed">
     <p>
       This is not a marketing claim — it's an architectural fact. There is no upload endpoint on
-      this site. All conversion happens in your browser using WebAssembly.
+      this site. All conversion happens in your browser using the Canvas API and WebAssembly.
     </p>
 
     <h2 class="mt-8 text-xl font-semibold">What we don't do</h2>
@@ -21,6 +21,7 @@ import BaseLayout from '~/layouts/BaseLayout.astro';
       <li>We don't load fonts, scripts, or images from third parties.</li>
       <li>We don't show ads.</li>
       <li>We don't have user accounts.</li>
+      <li>We don't store anything about you, locally or otherwise.</li>
     </ul>
 
     <h2 class="mt-8 text-xl font-semibold">Verify it yourself</h2>
@@ -30,11 +31,13 @@ import BaseLayout from '~/layouts/BaseLayout.astro';
       <li>You'll see zero outbound requests during conversion.</li>
     </ol>
 
-    <h2 class="mt-8 text-xl font-semibold">What we do store, locally</h2>
+    <h2 class="mt-8 text-xl font-semibold">A note on the service worker</h2>
     <p>
-      We use your browser's <code class="rounded bg-black/5 px-1 dark:bg-white/10">localStorage</code>
-      to remember your theme preference (light/dark) and last-used output format. That data never
-      leaves your device. You can clear it anytime via your browser's site settings.
+      We install a service worker so the site works offline after your first visit. It only
+      caches a → b's own assets (HTML, JavaScript, the WebAssembly conversion libraries) so the
+      app is fast and usable without a connection. It never sees your files, never sends them
+      anywhere, and only ever fetches from this domain. You can verify in DevTools → Application →
+      Service Workers.
     </p>
 
     <h2 class="mt-8 text-xl font-semibold">If we ever break this</h2>
@@ -44,8 +47,8 @@ import BaseLayout from '~/layouts/BaseLayout.astro';
         href="https://github.com/rosscyking1115/a-to-b"
         class="underline hover:no-underline"
         rel="noopener">GitHub</a
-      >. The privacy promise is non-negotiable; any change that adds a tracker, third-party request,
-      or upload endpoint would be a bug.
+      >. The privacy promise is non-negotiable; any change that adds a tracker, third-party
+      request, or upload endpoint would be a bug.
     </p>
   </div>
 </BaseLayout>

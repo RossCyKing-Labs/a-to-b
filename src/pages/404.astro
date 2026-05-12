@@ -20,7 +20,7 @@ import BaseLayout from '~/layouts/BaseLayout.astro';
       class="mx-auto mb-8 max-w-lg text-lg"
       style="color: var(--color-muted)"
     >
-      We only do one thing — convert files privately, in your browser. Try one of these:
+      We convert files privately, in your browser — that's it. Try one of these:
     </p>
 
     <div class="mx-auto grid max-w-2xl gap-3 sm:grid-cols-3">
@@ -29,29 +29,29 @@ import BaseLayout from '~/layouts/BaseLayout.astro';
         class="rounded-xl border p-4 text-left transition hover:scale-[1.02]"
         style="border-color: var(--color-border)"
       >
-        <div class="font-semibold">Image</div>
+        <div class="font-semibold">Image converter</div>
         <div class="mt-1 text-xs" style="color: var(--color-muted)">
           PNG · JPEG · WebP
         </div>
       </a>
       <a
-        href="/word-to-pdf"
+        href="/compress-pdf"
         class="rounded-xl border p-4 text-left transition hover:scale-[1.02]"
         style="border-color: var(--color-border)"
       >
-        <div class="font-semibold">Word → PDF</div>
+        <div class="font-semibold">Compress PDF</div>
         <div class="mt-1 text-xs" style="color: var(--color-muted)">
-          .docx → .pdf
+          Smaller files, selectable text
         </div>
       </a>
       <a
-        href="/pdf-to-word"
+        href="/merge-pdf"
         class="rounded-xl border p-4 text-left transition hover:scale-[1.02]"
         style="border-color: var(--color-border)"
       >
-        <div class="font-semibold">PDF → Word</div>
+        <div class="font-semibold">Merge PDF</div>
         <div class="mt-1 text-xs" style="color: var(--color-muted)">
-          .pdf → .docx
+          Combine PDFs into one
         </div>
       </a>
     </div>

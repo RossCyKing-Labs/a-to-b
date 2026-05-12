@@ -7,16 +7,25 @@ import BaseLayout from '~/layouts/BaseLayout.astro';
 
   <div class="space-y-6 text-base leading-relaxed">
     <p>
-      a → b is a free file converter that does one thing: convert files from format
-      <em>a</em> to format <em>b</em>, in your browser, without ever sending your data anywhere.
+      a → b is a free file converter that does one thing: take a file in format <em>a</em>,
+      give you back a file in format <em>b</em>, in your browser, without sending your data
+      anywhere.
+    </p>
+
+    <h2 class="mt-8 text-xl font-semibold">Why does this exist?</h2>
+    <p>
+      Most online file converters upload your files to their servers. Even when they say they
+      don't keep them, you have to take their word for it. I wanted a tool I could trust with
+      personal documents — contracts, tax forms, scanned IDs — without that leap of faith. So
+      I built one where the privacy promise is enforced by the architecture, not a policy
+      page: there is no upload endpoint on the site at all.
     </p>
 
     <h2 class="mt-8 text-xl font-semibold">How is this free?</h2>
     <p>
-      It costs us almost nothing to run. The site is static HTML and JavaScript hosted on
-      Cloudflare's free tier. Conversion happens on your device, so we don't pay for servers to
-      process your files. We don't sell your data. We don't show ads. If you'd like to support the
-      project, you can
+      It costs almost nothing to run. The site is static HTML and JavaScript hosted on
+      Cloudflare. Conversion happens on your device, so there's no server to pay for. There are
+      no ads. There's no data to sell. If you'd like to support the project, you can
       <a
         href="https://ko-fi.com/rosscyking"
         target="_blank"
@@ -25,11 +34,13 @@ import BaseLayout from '~/layouts/BaseLayout.astro';
       >. Optional, never asked twice.
     </p>
 
-    <h2 class="mt-8 text-xl font-semibold">Why does this exist?</h2>
+    <h2 class="mt-8 text-xl font-semibold">How is this fast?</h2>
     <p>
-      Most online file converters upload your files to their servers. Even when they say they don't
-      keep them, you have to take their word for it. We wanted a tool we could trust with personal
-      documents — contracts, tax forms, scanned IDs — without that leap of faith.
+      Modern browsers can do a surprising amount. Image conversion uses the Canvas API.
+      PDF tools use <code>pdf-lib</code> and <code>pdf.js</code>. Compress PDF additionally
+      runs <code>qpdf</code> compiled to WebAssembly, plus <code>mozjpeg</code> for image
+      re-encoding, in a Web Worker so the page stays responsive on large files. The whole
+      pipeline ships as a single static site — no installs, no extensions, no accounts.
     </p>
 
     <h2 class="mt-8 text-xl font-semibold">Open source</h2>
@@ -39,7 +50,7 @@ import BaseLayout from '~/layouts/BaseLayout.astro';
         href="https://github.com/rosscyking1115/a-to-b"
         class="underline hover:no-underline"
         rel="noopener">GitHub</a
-      >. Anyone can audit it.
+      >. Anyone can audit it, fork it, or open an issue. MIT-licensed.
     </p>
   </div>
 </BaseLayout>
