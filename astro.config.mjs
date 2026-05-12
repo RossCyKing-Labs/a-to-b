@@ -10,6 +10,12 @@ export default defineConfig({
   integrations: [react(), sitemap()],
   vite: {
     plugins: [tailwindcss()],
+    // ES-module worker output is required for our compress worker because
+    // @neslinesli93/qpdf-wasm uses dynamic imports to load its wasm binary;
+    // IIFE (Vite's default) doesn't support that.
+    worker: {
+      format: 'es',
+    },
   },
   build: {
     // Small stylesheets inline into HTML, large ones go external.
