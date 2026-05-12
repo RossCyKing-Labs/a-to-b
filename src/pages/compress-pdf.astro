@@ -27,11 +27,13 @@ import CompressPdfConverter from '~/components/CompressPdfConverter';
       How this works
     </h2>
     <p class="text-sm leading-relaxed">
-      Embedded JPEG images inside the PDF are decoded, downscaled, and re-encoded at a lower
-      quality. <strong>Text and vector graphics are untouched</strong>, so your output PDF stays
-      selectable and searchable. Works best on image-heavy PDFs; text-only PDFs typically can't
-      shrink much, in which case we return your original file unchanged. Your file never leaves
-      your device.
+      Three things happen, all locally: (1) embedded images are downsized to match how big they
+      actually appear on the page and re-encoded with mozjpeg; (2) document bloat like XMP
+      metadata and page thumbnails is removed; (3) a qpdf-wasm pass repacks the PDF's structure
+      (object streams, max-level deflate, image conversion). <strong>Text and vector graphics
+      are untouched</strong>, so your output PDF stays selectable and searchable. If we'd
+      produce a bigger file, we return your original unchanged. Your file never leaves your
+      device.
     </p>
   </aside>
 </BaseLayout>
