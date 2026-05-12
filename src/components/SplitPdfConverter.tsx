@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import FileDrop from './FileDrop';
+import PendingFilesConfirmation from './PendingFilesConfirmation';
 import { isPdf, splitPdfPerPage } from '~/lib/pdfTools';
 import { formatBytes } from '~/lib/format';
 
@@ -21,6 +22,7 @@ export default function SplitPdfConverter() {
   const [error, setError] = useState<string | null>(null);
   const [sourceName, setSourceName] = useState<string | null>(null);
   const [outputs, setOutputs] = useState<OutputItem[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const urlsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -42,15 +44,24 @@ export default function SplitPdfConverter() {
     setSourceName(null);
   };
 
-  const handleFiles = async (files: File[]) => {
-    reset();
+  // Files chosen go into a "pending" queue first — they're not split
+  // until the user clicks Confirm. Matches the UX of the other tools.
+  const handleSelect = (files: File[]) => {
     if (files.length === 0) return;
-    if (files.length > 1) {
-      setError('Drop just one PDF at a time to split.');
-      setStatus('error');
-      return;
-    }
-    const file = files[0];
+    // Split is single-file; if the user dropped multiple, only stage the first.
+    setPendingFiles([files[0]]);
+    setError(null);
+  };
+
+  const handleCancel = () => {
+    setPendingFiles([]);
+  };
+
+  const handleConfirm = async () => {
+    if (pendingFiles.length === 0) return;
+    const file = pendingFiles[0];
+    setPendingFiles([]);
+    reset();
     if (!(await isPdf(file))) {
       setError(`${file.name} is not a PDF.`);
       setStatus('error');
@@ -75,12 +86,22 @@ export default function SplitPdfConverter() {
 
   return (
     <div className="space-y-8">
-      <FileDrop accept="application/pdf,.pdf" multiple={false} onFiles={handleFiles}>
-        <p className="mb-2 text-lg font-medium">Drop one PDF here</p>
-        <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-          or click to select · each page becomes its own PDF
-        </p>
-      </FileDrop>
+      {pendingFiles.length === 0 ? (
+        <FileDrop accept="application/pdf,.pdf" multiple={false} onFiles={handleSelect}>
+          <p className="mb-2 text-lg font-medium">Drop one PDF here</p>
+          <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
+            or click to select · each page becomes its own PDF
+          </p>
+        </FileDrop>
+      ) : (
+        <PendingFilesConfirmation
+          files={pendingFiles}
+          verb="split"
+          disabled={status === 'splitting'}
+          onConfirm={handleConfirm}
+          onCancel={handleCancel}
+        />
+      )}
 
       {status === 'splitting' && sourceName && (
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import FileDrop from './FileDrop';
+import PendingFilesConfirmation from './PendingFilesConfirmation';
 import { isPdf, pdfToJpgs } from '~/lib/pdfTools';
 import { formatBytes } from '~/lib/format';
 
@@ -22,6 +23,7 @@ export default function PdfToJpgConverter() {
   const [sourceName, setSourceName] = useState<string | null>(null);
   const [outputs, setOutputs] = useState<OutputItem[]>([]);
   const [quality, setQuality] = useState(0.85);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const urlsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -43,15 +45,26 @@ export default function PdfToJpgConverter() {
     setSourceName(null);
   };
 
-  const handleFiles = async (files: File[]) => {
-    reset();
+  // Files chosen go into a "pending" queue first — they're not rendered
+  // until the user clicks Confirm. Lets the user tweak the quality slider
+  // after picking the file.
+  const handleSelect = (files: File[]) => {
     if (files.length === 0) return;
-    if (files.length > 1) {
-      setError('Drop just one PDF at a time.');
-      setStatus('error');
-      return;
-    }
-    const file = files[0];
+    setPendingFiles([files[0]]);
+    setError(null);
+  };
+
+  const handleCancel = () => {
+    setPendingFiles([]);
+  };
+
+  const handleConfirm = async () => {
+    if (pendingFiles.length === 0) return;
+    const file = pendingFiles[0];
+    // Snapshot quality at confirm time
+    const qualityToUse = quality;
+    setPendingFiles([]);
+    reset();
     if (!(await isPdf(file))) {
       setError(`${file.name} is not a PDF.`);
       setStatus('error');
@@ -60,7 +73,7 @@ export default function PdfToJpgConverter() {
     setSourceName(file.name);
     setStatus('rendering');
     try {
-      const pages = await pdfToJpgs(file, { quality });
+      const pages = await pdfToJpgs(file, { quality: qualityToUse });
       const items: OutputItem[] = pages.map((p) => {
         const url = URL.createObjectURL(p.blob);
         urlsRef.current.add(url);
@@ -100,12 +113,24 @@ export default function PdfToJpgConverter() {
         </p>
       </div>
 
-      <FileDrop accept="application/pdf,.pdf" multiple={false} onFiles={handleFiles}>
-        <p className="mb-2 text-lg font-medium">Drop one PDF here</p>
-        <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-          or click to select · each page renders as a separate JPG
-        </p>
-      </FileDrop>
+      {pendingFiles.length === 0 ? (
+        <FileDrop accept="application/pdf,.pdf" multiple={false} onFiles={handleSelect}>
+          <p className="mb-2 text-lg font-medium">Drop one PDF here</p>
+          <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
+            or click to select · each page renders as a separate JPG
+          </p>
+        </FileDrop>
+      ) : (
+        <PendingFilesConfirmation
+          files={pendingFiles}
+          verb="convert"
+          badge={`${Math.round(quality * 100)}% quality`}
+          hint="Adjust the quality slider above before confirming if you want a different output."
+          disabled={status === 'rendering'}
+          onConfirm={handleConfirm}
+          onCancel={handleCancel}
+        />
+      )}
 
       {status === 'rendering' && sourceName && (
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
