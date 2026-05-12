@@ -299,13 +299,13 @@ interface CompressPreset {
 }
 
 const COMPRESS_PRESETS: Record<CompressLevel, CompressPreset> = {
-  // Quality is the lever that does most of the work; oversample matters
-  // mainly for genuinely oversized images. Strong is intentionally
-  // aggressive on both axes — the label literally says "some image
-  // softness" so the trade-off is part of the contract.
+  // Strong is genuinely aggressive: q=28 produces clearly softer images
+  // on photos, and skipBelowQuality=0 means we always re-encode (the
+  // per-image safety check keeps the original bytes if recompression
+  // would inflate, so worst-case Strong is the same as the input image).
   low: { quality: 80, maxDim: 2200, oversample: 3.0, skipBelowQuality: 75 },
   medium: { quality: 65, maxDim: 1600, oversample: 2.5, skipBelowQuality: 60 },
-  high: { quality: 35, maxDim: 1000, oversample: 2.0, skipBelowQuality: 38 },
+  high: { quality: 28, maxDim: 900, oversample: 1.8, skipBelowQuality: 0 },
 };
 
 export interface CompressResult {
@@ -326,26 +326,57 @@ export interface CompressResult {
   smallerThanOriginal: boolean;
 }
 
-/** Stripped of viewing — XMP, thumbnails, piece info. Returns true if anything was removed. */
-function dropBloat(doc: PDFDocument): boolean {
+/**
+ * Strip bytes that aren't needed for rendering. The `aggressive` flag
+ * enables more invasive removal that has user-visible consequences:
+ * accessibility tags (used by screen readers), document outlines
+ * (bookmarks), and the structure tree go. Only flip it for Strong
+ * where the contract is explicitly "smallest file."
+ *
+ * Returns true if anything was removed.
+ */
+function dropBloat(doc: PDFDocument, aggressive: boolean): boolean {
   let removed = false;
+  const drop = (parent: ReturnType<typeof doc.catalog.get> | typeof doc.catalog, key: string) => {
+    // `parent` here is always a PDFDict-like; use a duck-typed delete
+    // so we don't need to import the concrete type.
+    const dict = parent as unknown as {
+      has: (k: ReturnType<typeof PDFName.of>) => boolean;
+      delete: (k: ReturnType<typeof PDFName.of>) => void;
+    };
+    const name = PDFName.of(key);
+    if (dict.has(name)) {
+      dict.delete(name);
+      removed = true;
+    }
+  };
 
-  // /Metadata is an XMP stream that viewers don't need to display
   const catalog = doc.catalog;
-  if (catalog.has(PDFName.of('Metadata'))) {
-    catalog.delete(PDFName.of('Metadata'));
-    removed = true;
+  // Catalog-level cruft that viewers don't display
+  drop(catalog, 'Metadata');
+  drop(catalog, 'PieceInfo');
+
+  if (aggressive) {
+    // /StructTreeRoot is the logical structure tree used by screen
+    // readers and "Save as Tagged PDF" tools — large on academic PDFs.
+    drop(catalog, 'StructTreeRoot');
+    drop(catalog, 'MarkInfo');
+    // Outlines = bookmarks in the sidebar. Typically small but free.
+    drop(catalog, 'Outlines');
+    // OCProperties = optional content groups (layers). Rare outside CAD.
+    drop(catalog, 'OCProperties');
   }
 
   // Page-level cruft
   for (const page of doc.getPages()) {
     const node = page.node;
-    for (const key of ['Thumb', 'PieceInfo', 'SpiderInfo'] as const) {
-      const name = PDFName.of(key);
-      if (node.has(name)) {
-        node.delete(name);
-        removed = true;
-      }
+    drop(node, 'Thumb');
+    drop(node, 'PieceInfo');
+    drop(node, 'SpiderInfo');
+    drop(node, 'Metadata');
+    if (aggressive) {
+      // /StructParents links into the StructTreeRoot we just dropped.
+      drop(node, 'StructParents');
     }
   }
 
@@ -478,8 +509,9 @@ export async function compressPdf(
     }
   }
 
-  // ── Stage 2: drop bloat ──
-  dropBloat(doc);
+  // ── Stage 2: drop bloat (aggressive at Strong: accessibility tags,
+  // bookmarks, structure tree all go; Balanced/Light keep them) ──
+  dropBloat(doc, level === 'high');
 
   // ── pdf-lib save (object streams help here too) ──
   const pdfLibBytes = await doc.save({ useObjectStreams: true });

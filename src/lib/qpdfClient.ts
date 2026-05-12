@@ -132,6 +132,10 @@ export async function runQpdfPass(input: Uint8Array): Promise<Uint8Array> {
           '--optimize-images',
           '--oi-min-width=300',
           '--oi-min-height=300',
+          // Prune fonts, colorspaces, patterns, etc. that aren't actually
+          // referenced from any page. qpdf's default is `auto` (only
+          // when safe); `yes` is more aggressive.
+          '--remove-unreferenced-resources=yes',
           // Note: not passing --linearize. Linearization adds a hint
           // table at the front of the PDF that's worth it on >2 MB
           // documents (fast web view) but inflates small files by
