@@ -23,7 +23,11 @@ interface Item {
 const LEVELS: { id: CompressLevel; label: string; desc: string }[] = [
   { id: 'low', label: 'Light', desc: 'Best quality, modest reduction' },
   { id: 'medium', label: 'Balanced', desc: 'Recommended for most files' },
-  { id: 'high', label: 'Strong', desc: 'Smallest file, some image softness' },
+  {
+    id: 'high',
+    label: 'Strong',
+    desc: 'Smallest file — pages flatten to images, text stays selectable',
+  },
 ];
 
 function levelLabel(level: CompressLevel): string {
@@ -124,16 +128,25 @@ export default function CompressPdfConverter() {
         // Compose a one-line breakdown of what we did.
         const noteParts: string[] = [];
         if (result.smallerThanOriginal) {
-          if (result.imagesRecompressed > 0) {
+          if (result.strategy === 'rasterize') {
             noteParts.push(
-              `${result.imagesRecompressed} image${result.imagesRecompressed === 1 ? '' : 's'} recompressed`,
+              `${result.pagesRasterized} page${result.pagesRasterized === 1 ? '' : 's'} flattened`,
             );
-          }
-          if (result.qpdfPassRan) {
-            noteParts.push(result.qpdfHelped ? 'qpdf saved more' : 'qpdf ran');
-          } else if (noteParts.length === 0) {
-            // No images, no qpdf — must've been bloat removal alone.
-            noteParts.push('repacked');
+            if (result.qpdfPassRan && result.qpdfHelped) {
+              noteParts.push('qpdf saved more');
+            }
+          } else {
+            if (result.imagesRecompressed > 0) {
+              noteParts.push(
+                `${result.imagesRecompressed} image${result.imagesRecompressed === 1 ? '' : 's'} recompressed`,
+              );
+            }
+            if (result.qpdfPassRan) {
+              noteParts.push(result.qpdfHelped ? 'qpdf saved more' : 'qpdf ran');
+            } else if (noteParts.length === 0) {
+              // No images, no qpdf — must've been bloat removal alone.
+              noteParts.push('repacked');
+            }
           }
         } else {
           noteParts.push('Already optimal — original returned');
@@ -211,11 +224,12 @@ export default function CompressPdfConverter() {
         className="rounded-lg border p-3 text-xs leading-relaxed"
         style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}
       >
-        How this works: embedded images get downsized to match how big they actually appear on
-        the page and re-encoded with mozjpeg. After that, a second pass repacks the PDF
-        structure with maximum compression. <strong>Text stays selectable and searchable</strong>
-        — we never rasterize. If the compressed output would be bigger than the input, we return
-        the original unchanged.
+        <strong>Light</strong> and <strong>Balanced</strong> recompress embedded images and
+        repack the PDF structure — text, fonts, form fields, and bookmarks all preserved.
+        <br />
+        <strong>Strong</strong> goes much further: pages are flattened to images with an
+        invisible text layer for selection. Form fields, bookmarks, annotations, and
+        accessibility tags are dropped — but you can typically expect 80–90% smaller files.
       </div>
 
       {pendingFiles.length === 0 ? (
@@ -285,7 +299,8 @@ export default function CompressPdfConverter() {
                   </div>
                   <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
                     {it.status === 'pending' && 'Queued…'}
-                    {it.status === 'compressing' && 'Recompressing images…'}
+                    {it.status === 'compressing' &&
+                      (it.level === 'high' ? 'Flattening pages…' : 'Recompressing images…')}
                     {it.status === 'done' && it.newSize !== undefined && (
                       <>
                         {formatBytes(it.originalSize)} → {formatBytes(it.newSize)} (
