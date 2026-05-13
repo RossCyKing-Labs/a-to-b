@@ -27,13 +27,21 @@ import CompressPdfConverter from '~/components/CompressPdfConverter';
       How this works
     </h2>
     <p class="text-sm leading-relaxed">
-      Three things happen, all locally: (1) embedded images are downsized to match how big they
-      actually appear on the page and re-encoded with mozjpeg; (2) document bloat like XMP
-      metadata and page thumbnails is removed; (3) a qpdf-wasm pass repacks the PDF's structure
-      (object streams, max-level deflate, image conversion). <strong>Text and vector graphics
-      are untouched</strong>, so your output PDF stays selectable and searchable. If we'd
-      produce a bigger file, we return your original unchanged. Your file never leaves your
-      device.
+      <strong>Light</strong> and <strong>Balanced</strong> use image recompression: embedded
+      images are downsized to match how big they actually appear on the page, re-encoded with
+      mozjpeg, then a qpdf-wasm pass repacks the PDF's structure. Text, fonts, vectors, form
+      fields, and bookmarks are all preserved.
+    </p>
+    <p class="mt-3 text-sm leading-relaxed">
+      <strong>Strong</strong> uses a different technique for much bigger savings (often 80–90%):
+      each page is rendered to a JPEG and rebuilt with an invisible text layer overlaid at the
+      original character positions. <strong>Text stays selectable and searchable</strong>, but
+      form widgets, signature fields, bookmarks, annotations, and accessibility tags are not
+      preserved. Use Light or Balanced if you need to keep those.
+    </p>
+    <p class="mt-3 text-sm leading-relaxed">
+      If we'd produce a bigger file, we hand back your original unchanged. Either way, your
+      file never leaves your device.
     </p>
   </aside>
 </BaseLayout>

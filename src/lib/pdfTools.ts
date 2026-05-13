@@ -312,12 +312,19 @@ export interface CompressResult {
   blob: Blob;
   /** Original input size in bytes. */
   originalSize: number;
-  /** Size after pdf-lib's image+bloat pass, before qpdf. */
+  /**
+   * Size after pdf-lib's first pass (image recompression for Light/Balanced,
+   * rasterize-and-rebuild for Strong), before qpdf if it runs.
+   */
   afterPdfLibSize: number;
   /** Final size we're handing back (which is the smallest pass that ran). */
   finalSize: number;
-  /** How many embedded images we touched (recompressed and/or downsampled). */
+  /** Which strategy the preset used. */
+  strategy: 'image-recompress' | 'rasterize';
+  /** How many embedded images we touched. 0 for the rasterize strategy. */
   imagesRecompressed: number;
+  /** How many pages we rasterized. 0 for the image-recompress strategy. */
+  pagesRasterized: number;
   /** Whether qpdf's structural pass ran (false if it failed/was skipped). */
   qpdfPassRan: boolean;
   /** If qpdf ran, was its output smaller than pdf-lib's? (we kept the smaller of the two) */
@@ -384,25 +391,35 @@ function dropBloat(doc: PDFDocument, aggressive: boolean): boolean {
 }
 
 /**
- * Compress a PDF without rasterizing — text and vector graphics are
- * left untouched, so the output PDF remains fully selectable and
- * searchable.
+ * Compress a PDF. Two strategies depending on the preset:
  *
- * The amount of compression you'll see depends on the input:
- *  - Image-heavy PDFs (scans, photos): often 40-70% reduction
- *  - Mixed text+image PDFs (reports, papers): often 25-40%
- *  - Pure-text PDFs: 5-20% from structural rewrite alone
+ *  - Light / Balanced: image-recompression. Walk indirect objects,
+ *    re-encode JPEG image streams at lower quality (DPI-aware), drop
+ *    bloat (XMP, thumbnails), then run qpdf for structural compression.
+ *    Text, vectors, fonts, structure all preserved. 25-40% on mixed PDFs.
  *
- * If the result is somehow larger than the input (rare), we hand back
- * the original bytes unchanged so the user never gets a worse outcome.
+ *  - Strong: rasterize-and-rebuild. Each page becomes a flat JPEG with
+ *    an invisible text layer overlaid so the output stays selectable
+ *    and searchable. Form widgets, signatures, structure tags, and
+ *    layers are dropped. 75-92% on mixed PDFs.
+ *
+ * In either strategy: if the result is somehow larger than the input,
+ * we hand back the original bytes unchanged so the user never gets a
+ * worse outcome.
  */
 export async function compressPdf(
   file: File,
   level: CompressLevel = 'medium',
 ): Promise<CompressResult> {
-  const preset = COMPRESS_PRESETS[level];
   const buf = await file.arrayBuffer();
   const originalSize = buf.byteLength;
+
+  // ── Strong: completely different strategy ──
+  if (level === 'high') {
+    return compressViaRasterize(file, buf, originalSize);
+  }
+
+  const preset = COMPRESS_PRESETS[level];
   const doc = await PDFDocument.load(buf, { ignoreEncryption: false });
 
   // ── Phase C: compute max rendered size per image (in PDF points) ──
@@ -509,9 +526,12 @@ export async function compressPdf(
     }
   }
 
-  // ── Stage 2: drop bloat (aggressive at Strong: accessibility tags,
-  // bookmarks, structure tree all go; Balanced/Light keep them) ──
-  dropBloat(doc, level === 'high');
+  // ── Stage 2: drop bloat (XMP metadata, thumbnails, piece info) ──
+  // Aggressive bloat removal (accessibility tags, bookmarks, structure
+  // tree) was previously tied to Strong, but Strong now uses the
+  // rasterize pipeline above which discards those naturally. Light and
+  // Balanced keep accessibility intact, so we never pass `true` here.
+  dropBloat(doc, false);
 
   // ── pdf-lib save (object streams help here too) ──
   const pdfLibBytes = await doc.save({ useObjectStreams: true });
@@ -554,7 +574,9 @@ export async function compressPdf(
       originalSize,
       afterPdfLibSize,
       finalSize: originalSize,
+      strategy: 'image-recompress',
       imagesRecompressed,
+      pagesRasterized: 0,
       qpdfPassRan,
       qpdfHelped,
       smallerThanOriginal: false,
@@ -566,7 +588,86 @@ export async function compressPdf(
     originalSize,
     afterPdfLibSize,
     finalSize: bestBytes.byteLength,
+    strategy: 'image-recompress',
     imagesRecompressed,
+    pagesRasterized: 0,
+    qpdfPassRan,
+    qpdfHelped,
+    smallerThanOriginal: true,
+  };
+}
+
+/**
+ * Strong-preset implementation: rasterize each page to a JPEG and overlay
+ * an invisible text layer so the output stays selectable.
+ *
+ * Optionally chains through qpdf for a final structural pass — qpdf
+ * usually shaves another 1-5% off the rasterized PDF by repacking the
+ * indirect objects and re-deflating any flate streams the rasterize step
+ * left behind (e.g., the small content streams that draw each image).
+ *
+ * Lazy-loads rasterizePipeline so users who pick Light/Balanced never
+ * download the (already-bundled-elsewhere) pdf.js text-extraction path.
+ */
+async function compressViaRasterize(
+  file: File,
+  buf: ArrayBuffer,
+  originalSize: number,
+): Promise<CompressResult> {
+  const { rasterizePdf } = await import('./rasterizePipeline');
+  // Tuned for "iLovePDF Recommended" parity: 144 DPI is retina-class
+  // sharpness, q55 is the visual-equivalence sweet spot.
+  const rasterized = await rasterizePdf(file, { dpi: 144, jpegQuality: 55 });
+  const afterPdfLibSize = rasterized.bytes.byteLength;
+  let bestBytes: Uint8Array = rasterized.bytes;
+  let qpdfPassRan = false;
+  let qpdfHelped = false;
+  let qpdfBytesLength = 0;
+  try {
+    const { runQpdfPass } = await import('./qpdfClient');
+    const qpdfBytes = await runQpdfPass(rasterized.bytes);
+    qpdfPassRan = true;
+    qpdfBytesLength = qpdfBytes.byteLength;
+    if (qpdfBytes.byteLength < bestBytes.byteLength) {
+      bestBytes = qpdfBytes;
+      qpdfHelped = true;
+    }
+  } catch (err) {
+    console.warn('[compressPdf:strong] qpdf pass failed:', err);
+  }
+
+  const pct = (after: number) =>
+    `${((1 - after / originalSize) * 100).toFixed(1)}%`;
+  console.log(
+    `[compressPdf] level=high strategy=rasterize pages=${rasterized.pagesRasterized} | ` +
+      `original=${originalSize} → rasterize=${afterPdfLibSize} (${pct(afterPdfLibSize)}) ` +
+      `→ qpdf=${qpdfPassRan ? `${qpdfBytesLength} (${pct(qpdfBytesLength)})` : 'skipped'} ` +
+      `→ final=${bestBytes.byteLength} (${pct(bestBytes.byteLength)})`,
+  );
+
+  if (bestBytes.byteLength >= originalSize) {
+    return {
+      blob: new Blob([buf as BlobPart], { type: 'application/pdf' }),
+      originalSize,
+      afterPdfLibSize,
+      finalSize: originalSize,
+      strategy: 'rasterize',
+      imagesRecompressed: 0,
+      pagesRasterized: rasterized.pagesRasterized,
+      qpdfPassRan,
+      qpdfHelped,
+      smallerThanOriginal: false,
+    };
+  }
+
+  return {
+    blob: pdfBlob(bestBytes),
+    originalSize,
+    afterPdfLibSize,
+    finalSize: bestBytes.byteLength,
+    strategy: 'rasterize',
+    imagesRecompressed: 0,
+    pagesRasterized: rasterized.pagesRasterized,
     qpdfPassRan,
     qpdfHelped,
     smallerThanOriginal: true,
