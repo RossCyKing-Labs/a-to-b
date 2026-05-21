@@ -1,11 +1,12 @@
 ---
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import PdfToJpgConverter from '~/components/PdfToJpgConverter';
+import Faq from '~/components/Faq.astro';
 ---
 
 <BaseLayout
-  title="PDF to JPG · a → b"
-  description="Render every page of a PDF as a JPG in your browser. Files never leave your device."
+  title="PDF to JPG — PDF pages to images · a → b"
+  description="Convert each page of a PDF into a JPG image, free, entirely in your browser. Your file is never uploaded. No accounts, no limits, no ads."
 >
   <header class="mb-8">
     <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">PDF → JPG</h1>
@@ -31,4 +32,21 @@ import PdfToJpgConverter from '~/components/PdfToJpgConverter';
       chosen quality. Useful for sharing single pages as images. Your file never leaves your device.
     </p>
   </aside>
+
+  <Faq
+    items={[
+      {
+        q: 'What do I get back?',
+        a: 'One JPG image per page of your PDF, each downloadable separately.',
+      },
+      {
+        q: 'Can I control the image quality?',
+        a: 'Yes — a quality slider lets you trade file size against sharpness. 85% is a good default.',
+      },
+      {
+        q: 'Are my files uploaded?',
+        a: 'No. Pages are rendered to images in your browser; your PDF never leaves your device.',
+      },
+    ]}
+  />
 </BaseLayout>

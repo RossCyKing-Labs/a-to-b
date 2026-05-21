@@ -1,11 +1,12 @@
 ---
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import CompressPdfConverter from '~/components/CompressPdfConverter';
+import Faq from '~/components/Faq.astro';
 ---
 
 <BaseLayout
-  title="Compress PDF · a → b"
-  description="Shrink PDF file size in your browser. Text stays selectable. Files never leave your device."
+  title="Compress PDF — shrink file size in-browser · a → b"
+  description="Compress and shrink PDF file size, free, entirely in your browser. Text stays selectable. Files are never uploaded. No accounts, no limits, no ads."
 >
   <header class="mb-8">
     <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Compress PDF</h1>
@@ -44,4 +45,21 @@ import CompressPdfConverter from '~/components/CompressPdfConverter';
       file never leaves your device.
     </p>
   </aside>
+
+  <Faq
+    items={[
+      {
+        q: 'How much smaller will my PDF get?',
+        a: 'It depends on the file and the preset. Light and Balanced typically save 10–25%; Strong can reach 80–90% on image-heavy or mixed PDFs.',
+      },
+      {
+        q: 'Will the text still be selectable after compressing?',
+        a: 'Yes. On Light and Balanced everything is preserved. On Strong, pages are flattened to images but an invisible text layer keeps the text selectable and searchable.',
+      },
+      {
+        q: 'Are my files uploaded to a server?',
+        a: 'No. Compression runs entirely in your browser — your PDF never leaves your device.',
+      },
+    ]}
+  />
 </BaseLayout>

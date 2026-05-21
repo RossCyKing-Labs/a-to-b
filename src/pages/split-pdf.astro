@@ -1,11 +1,12 @@
 ---
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import SplitPdfConverter from '~/components/SplitPdfConverter';
+import Faq from '~/components/Faq.astro';
 ---
 
 <BaseLayout
-  title="Split PDF · a → b"
-  description="Split a PDF into individual single-page PDFs in your browser. Files never leave your device."
+  title="Split PDF — one file per page · a → b"
+  description="Split a PDF into individual single-page PDFs, free and entirely in your browser. Your file is never uploaded. No accounts, no limits, no ads."
 >
   <header class="mb-8">
     <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Split PDF</h1>
@@ -31,4 +32,21 @@ import SplitPdfConverter from '~/components/SplitPdfConverter';
       selectable text are preserved. Your file never leaves your device.
     </p>
   </aside>
+
+  <Faq
+    items={[
+      {
+        q: 'What does splitting do?',
+        a: 'It turns one PDF into separate single-page PDFs — one downloadable file per page.',
+      },
+      {
+        q: 'Are my files uploaded?',
+        a: 'No. Splitting runs in your browser; your PDF never leaves your device.',
+      },
+      {
+        q: 'Is quality and text preserved?',
+        a: 'Yes. Each page keeps its original formatting, fonts, and selectable text — nothing is rasterized.',
+      },
+    ]}
+  />
 </BaseLayout>
