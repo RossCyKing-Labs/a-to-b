@@ -1,11 +1,12 @@
 ---
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import MergePdfConverter from '~/components/MergePdfConverter';
+import Faq from '~/components/Faq.astro';
 ---
 
 <BaseLayout
-  title="Merge PDF · a → b"
-  description="Combine multiple PDFs into one in your browser. Files never leave your device."
+  title="Merge PDF — free, in your browser · a → b"
+  description="Merge multiple PDFs into one, free, entirely in your browser. Files never get uploaded. No accounts, no file-size limits, no ads."
 >
   <header class="mb-8">
     <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Merge PDF</h1>
@@ -32,4 +33,21 @@ import MergePdfConverter from '~/components/MergePdfConverter';
       no rasterization. Your files never touch a server.
     </p>
   </aside>
+
+  <Faq
+    items={[
+      {
+        q: 'How many PDFs can I merge?',
+        a: 'As many as you want. Drag the files to reorder them before merging — there’s no file count or size limit.',
+      },
+      {
+        q: 'Are my PDFs uploaded to a server?',
+        a: 'No. Merging happens entirely in your browser — your files never leave your device.',
+      },
+      {
+        q: 'Does merging reduce quality?',
+        a: 'No. Pages are copied exactly as they are, keeping original formatting, fonts, and selectable text.',
+      },
+    ]}
+  />
 </BaseLayout>

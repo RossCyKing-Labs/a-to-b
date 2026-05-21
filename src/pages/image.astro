@@ -1,11 +1,12 @@
 ---
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import ImageConverter from '~/components/ImageConverter';
+import Faq from '~/components/Faq.astro';
 ---
 
 <BaseLayout
-  title="Image converter · a → b"
-  description="Convert PNG, JPEG, and WebP images in your browser. Files never leave your device."
+  title="Image converter — PNG, JPEG & WebP · a → b"
+  description="Free image converter for PNG, JPEG, and WebP. Runs entirely in your browser — your files are never uploaded. No accounts, no limits, no ads."
 >
   <header class="mb-8">
     <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Image converter</h1>
@@ -32,4 +33,21 @@ import ImageConverter from '~/components/ImageConverter';
       during conversion.
     </p>
   </aside>
+
+  <Faq
+    items={[
+      {
+        q: 'Which image formats can I convert?',
+        a: 'PNG, JPEG, and WebP, in any direction. Drop several files at once to convert a whole batch.',
+      },
+      {
+        q: 'Are my images uploaded anywhere?',
+        a: 'No. Conversion runs in your browser using the Canvas API — your images never leave your device.',
+      },
+      {
+        q: 'Is there a limit on file size or number of images?',
+        a: 'No limits. Convert as many images, as large as you like — speed depends only on your own device.',
+      },
+    ]}
+  />
 </BaseLayout>

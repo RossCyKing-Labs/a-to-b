@@ -1,11 +1,12 @@
 ---
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import JpgToPdfConverter from '~/components/JpgToPdfConverter';
+import Faq from '~/components/Faq.astro';
 ---
 
 <BaseLayout
-  title="JPG to PDF · a → b"
-  description="Combine JPG and PNG images into a single PDF in your browser. Files never leave your device."
+  title="JPG to PDF — images to PDF in-browser · a → b"
+  description="Convert JPG and PNG images into a single PDF, free, in your browser. Files never leave your device. No accounts, no limits, no ads."
 >
   <header class="mb-8">
     <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">JPG → PDF</h1>
@@ -31,4 +32,21 @@ import JpgToPdfConverter from '~/components/JpgToPdfConverter';
       quality is preserved. Your files never touch a server.
     </p>
   </aside>
+
+  <Faq
+    items={[
+      {
+        q: 'Which image formats can I turn into a PDF?',
+        a: 'JPG and PNG. Drop several at once and drag them to set the page order.',
+      },
+      {
+        q: 'Can I choose the page size?',
+        a: 'Yes — A4, US Letter, or “fit to image”. Images are scaled to fit while keeping their aspect ratio.',
+      },
+      {
+        q: 'Are my images uploaded?',
+        a: 'No. The PDF is assembled in your browser; your images never leave your device.',
+      },
+    ]}
+  />
 </BaseLayout>
