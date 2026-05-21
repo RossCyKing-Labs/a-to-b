@@ -1,0 +1,41 @@
+---
+/**
+ * Reusable FAQ block for tool pages.
+ *
+ * Beyond answering real user questions, the FAQ content gives each page
+ * substantive, keyword-relevant text — which helps the page rank for
+ * long-tail searches ("compress pdf without uploading", "is X private")
+ * that the short hero copy alone can't cover.
+ *
+ * Answers may contain simple trusted inline HTML (links, <strong>), so
+ * they're rendered with set:html. Never pass user-supplied content here.
+ */
+interface FaqItem {
+  q: string;
+  a: string;
+}
+
+interface Props {
+  items: FaqItem[];
+}
+
+const { items } = Astro.props;
+---
+
+<section class="mt-12">
+  <h2 class="mb-4 text-xl font-bold tracking-tight">Frequently asked questions</h2>
+  <div class="space-y-5">
+    {
+      items.map((item) => (
+        <div>
+          <h3 class="font-semibold">{item.q}</h3>
+          <p
+            class="mt-1 text-sm leading-relaxed"
+            style="color: var(--color-muted)"
+            set:html={item.a}
+          />
+        </div>
+      ))
+    }
+  </div>
+</section>

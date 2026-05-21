@@ -1,11 +1,12 @@
 ---
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import RotatePdfConverter from '~/components/RotatePdfConverter';
+import Faq from '~/components/Faq.astro';
 ---
 
 <BaseLayout
-  title="Rotate PDF · a → b"
-  description="Rotate every page of a PDF in your browser. Files never leave your device."
+  title="Rotate PDF — free, in your browser · a → b"
+  description="Rotate PDF pages 90, 180, or 270 degrees, free and in your browser. Files never get uploaded. No accounts, no limits, no ads."
 >
   <header class="mb-8">
     <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Rotate PDF</h1>
@@ -31,4 +32,21 @@ import RotatePdfConverter from '~/components/RotatePdfConverter';
       there's no quality loss and text remains selectable. Your file never leaves your device.
     </p>
   </aside>
+
+  <Faq
+    items={[
+      {
+        q: 'How much can I rotate?',
+        a: '90° right, 180°, or 90° left — applied to every page of the PDF.',
+      },
+      {
+        q: 'Does rotating reduce quality?',
+        a: 'No. Rotation is stored as page metadata; the underlying content is untouched and text stays selectable.',
+      },
+      {
+        q: 'Are my files uploaded?',
+        a: 'No. Rotation happens in your browser; your PDF never leaves your device.',
+      },
+    ]}
+  />
 </BaseLayout>

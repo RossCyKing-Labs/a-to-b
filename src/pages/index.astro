@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '~/layouts/BaseLayout.astro';
+import Faq from '~/components/Faq.astro';
 
 interface Tool {
   title: string;
@@ -36,7 +37,10 @@ const categories: Category[] = [
 ];
 ---
 
-<BaseLayout title="a → b · privacy-first file converter">
+<BaseLayout
+  title="Free file converter that runs in your browser · a → b"
+  description="Convert images and PDFs entirely in your browser — free, no uploads, no tracking, no ads. Compress, merge, split, and rotate PDFs; convert PNG, JPEG, and WebP."
+>
   <section class="py-12 text-center sm:py-16">
     <h1 class="mb-4 text-4xl font-bold tracking-tight sm:text-6xl">
       Convert files.
@@ -112,4 +116,25 @@ const categories: Category[] = [
       Download → PDF</strong> — both work great.
     </p>
   </section>
+
+  <Faq
+    items={[
+      {
+        q: 'Is a → b really free?',
+        a: 'Yes — completely free, with no paywalls, no file-size limits, and no accounts. The only optional extra is a tip jar if you want to support the project.',
+      },
+      {
+        q: 'Are my files uploaded to a server?',
+        a: 'No. Every conversion runs inside your own browser. There is no upload endpoint at all — you can confirm it in your browser’s DevTools Network tab while a conversion runs.',
+      },
+      {
+        q: 'Do I need to install anything or create an account?',
+        a: 'No. a → b runs as a normal website — nothing to install, no sign-up. Once you’ve visited once it even works offline.',
+      },
+      {
+        q: 'Which conversions are supported?',
+        a: 'Image conversion between PNG, JPEG, and WebP, plus PDF tools: merge, split, rotate, compress, JPG → PDF, and PDF → JPG.',
+      },
+    ]}
+  />
 </BaseLayout>
