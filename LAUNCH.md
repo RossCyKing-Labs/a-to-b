@@ -11,7 +11,7 @@ Work through this BEFORE posting anywhere.
 - [ ] **Desktop Chrome / Edge** — every tool's happy path
 - [ ] **Desktop Firefox** — every tool (some PDF rendering edge cases differ)
 - [ ] **Desktop Safari** (if you have Mac access)
-- [ ] **iOS Safari** — file picker works, drag-drop falls back gracefully, print dialog opens for Word→PDF
+- [ ] **iOS Safari** — file picker works, drag-drop falls back gracefully, downloads save correctly
 - [ ] **Chrome Android** — same checks; verify "Add to Home Screen" installs the PWA with the orange icon
 - [ ] **Offline test** — load the site, disable network in DevTools, refresh — should still work
 
@@ -22,8 +22,6 @@ Run on each route:
 ```
 - /              (homepage)
 - /image
-- /word-to-pdf
-- /pdf-to-word
 - /merge-pdf
 - /split-pdf
 - /jpg-to-pdf
@@ -49,8 +47,7 @@ Save this image — use it in the HN post, Reddit post, and as a Twitter/X attac
 
 ### Real-world test pass
 
-- [ ] Convert 5 different real PDFs through PDF→Word, judge output quality honestly
-- [ ] Try the new PDF tools on a few real PDFs (merge a few statements, split a contract, etc.)
+- [ ] Try each PDF tool on a few real PDFs (merge a few statements, split a contract, compress a scan, etc.)
 - [ ] Drop a non-PDF into the PDF tools — confirm clear error message
 
 ---
@@ -101,16 +98,15 @@ Adjust to your voice. The key thing: lead with the **anti-pattern you're rejecti
 **Body:**
 > Hi HN — I built a → b because every "free" online file converter I'd used uploaded my files to a server I had to trust. I wanted a tool that was architecturally incapable of leaking my data.
 >
-> a → b runs entirely in the browser. There's no upload endpoint. Conversion happens locally via pdf.js, mammoth, pdf-lib, and the Canvas API. The Network tab during a conversion is empty — that's the entire pitch.
+> a → b runs entirely in the browser. There's no upload endpoint. Conversion happens locally via pdf.js, pdf-lib, qpdf-wasm, mozjpeg-wasm, and the Canvas API. The Network tab during a conversion is empty — that's the entire pitch.
 >
 > Current tools:
 > - Image: PNG ↔ JPEG ↔ WebP
-> - Document: Word → PDF, PDF → Word (with bold/italic/hyperlink preservation)
-> - PDF: Merge, Split, JPG ↔ PDF, Rotate, Compress
+> - PDF: Merge, Split, JPG → PDF, PDF → JPG, Rotate, Compress
 >
 > No accounts, no file-size limits beyond your browser's memory, no ads, no tracking. The site is also a PWA so it works offline after first load. Code is on GitHub if you want to verify what it does.
 >
-> Things I'd love feedback on: PDF → Word quality on your real documents (the hardest converter), and whether the "verify privacy in DevTools" claim feels credible.
+> Things I'd love feedback on: Compress PDF output quality on your real documents (the trickiest to get right), and whether the "verify privacy in DevTools" claim feels credible.
 >
 > Live: https://fromatob.app
 > Repo: https://github.com/rosscyking1115/a-to-b
@@ -125,7 +121,7 @@ Adjust to your voice. The key thing: lead with the **anti-pattern you're rejecti
 >
 > You can verify the claim yourself: open the site, open DevTools → Network tab, drop a file, convert. Zero outbound requests during conversion. (Screenshot attached.)
 >
-> Tools so far: PNG/JPEG/WebP, Word ↔ PDF, plus the common PDF tools (merge, split, rotate, compress, JPG ↔ PDF). All client-side.
+> Tools so far: PNG/JPEG/WebP image conversion, plus the common PDF tools (merge, split, rotate, compress, JPG → PDF, PDF → JPG). All client-side.
 >
 > Free forever, no premium tier. Tip jar on Ko-fi if it saves you time, but never required.
 >
@@ -147,10 +143,9 @@ Adjust to your voice. The key thing: lead with the **anti-pattern you're rejecti
 **Post 2 — the toolset (reply to your own post 1):**
 > Tools live today:
 > – Image: PNG ↔ JPEG ↔ WebP
-> – Word ↔ PDF
-> – PDF: merge, split, rotate, compress, JPG ↔ PDF
+> – PDF: merge, split, rotate, compress, JPG → PDF, PDF → JPG
 >
-> Everything client-side via pdf-lib, pdf.js, mammoth, Canvas API. No server, no analytics, no accounts.
+> Everything client-side via pdf-lib, pdf.js, qpdf-wasm, mozjpeg-wasm, Canvas API. No server, no analytics, no accounts.
 
 ### Product Hunt tagline
 
