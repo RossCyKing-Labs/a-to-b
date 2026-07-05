@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import FileDrop from './FileDrop';
 import PendingFilesConfirmation from './PendingFilesConfirmation';
+import ResultList from './ui/ResultList';
+import DownloadRow from './ui/DownloadRow';
+import ErrorText from './ui/ErrorText';
 import { compressPdf, isPdf, type CompressLevel } from '~/lib/pdfTools';
 import { formatBytes, sizeDelta } from '~/lib/format';
+import { useObjectUrls } from '~/lib/useObjectUrls';
 
 type Status = 'pending' | 'compressing' | 'done' | 'error';
 
@@ -51,23 +55,10 @@ export default function CompressPdfConverter() {
   const [level, setLevel] = useState<CompressLevel>('medium');
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [items, setItems] = useState<Item[]>([]);
-  const urlsRef = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    const urls = urlsRef.current;
-    return () => {
-      urls.forEach((u) => URL.revokeObjectURL(u));
-      urls.clear();
-    };
-  }, []);
+  const urls = useObjectUrls();
 
   const reset = () => {
-    items.forEach((it) => {
-      if (it.url) {
-        URL.revokeObjectURL(it.url);
-        urlsRef.current.delete(it.url);
-      }
-    });
+    urls.revokeAll();
     setItems([]);
   };
 
@@ -123,8 +114,7 @@ export default function CompressPdfConverter() {
         const newName = result.smallerThanOriginal
           ? `${stem}-compressed.pdf`
           : `${stem}.pdf`;
-        const url = URL.createObjectURL(result.blob);
-        urlsRef.current.add(url);
+        const url = urls.track(result.blob);
         // Compose a one-line breakdown of what we did.
         const noteParts: string[] = [];
         if (result.smallerThanOriginal) {
@@ -252,9 +242,9 @@ export default function CompressPdfConverter() {
       )}
 
       {items.length > 0 && (
-        <section aria-live="polite">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-semibold">
+        <ResultList
+          heading={
+            <>
               Results
               <span
                 className="ml-2 text-sm font-normal"
@@ -264,67 +254,50 @@ export default function CompressPdfConverter() {
                   ? `· compressing ${inProgress}…`
                   : `· ${doneCount} of ${items.length} ready`}
               </span>
-            </h2>
-            <button
-              type="button"
-              onClick={reset}
-              className="text-sm underline hover:no-underline"
-              style={{ color: 'var(--color-muted)' }}
-            >
-              Clear all
-            </button>
-          </div>
-          <ul className="space-y-2">
-            {items.map((it) => (
-              <li
-                key={it.id}
-                className="flex items-center justify-between gap-4 rounded-lg border p-3"
-                style={{ borderColor: 'var(--color-border)' }}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="truncate text-sm font-medium">
-                      {it.status === 'done' ? it.newName : it.originalName}
-                    </span>
-                    <span
-                      className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase"
-                      style={{
-                        background: 'var(--color-accent-soft)',
-                        color: 'var(--color-accent)',
-                      }}
-                      title={`Compressed at ${levelLabel(it.level)} preset`}
-                    >
-                      {levelLabel(it.level)}
-                    </span>
-                  </div>
-                  <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
-                    {it.status === 'pending' && 'Queued…'}
-                    {it.status === 'compressing' &&
-                      (it.level === 'high' ? 'Flattening pages…' : 'Recompressing images…')}
-                    {it.status === 'done' && it.newSize !== undefined && (
-                      <>
-                        {formatBytes(it.originalSize)} → {formatBytes(it.newSize)} (
-                        {sizeDelta(it.originalSize, it.newSize)})
-                        {it.note && <span> · {it.note}</span>}
-                      </>
-                    )}
-                    {it.status === 'error' && <span style={{ color: '#dc2626' }}>{it.error}</span>}
-                  </div>
-                </div>
-                {it.status === 'done' && it.url && it.newName && (
-                  <a
-                    href={it.url}
-                    download={it.newName}
-                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-white transition hover:opacity-90"
-                    style={{ background: 'var(--color-accent)' }}
+            </>
+          }
+          onClear={reset}
+        >
+          {items.map((it) => (
+            <DownloadRow
+              key={it.id}
+              header={
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="truncate text-sm font-medium">
+                    {it.status === 'done' ? it.newName : it.originalName}
+                  </span>
+                  <span
+                    className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase"
+                    style={{
+                      background: 'var(--color-accent-soft)',
+                      color: 'var(--color-accent)',
+                    }}
+                    title={`Compressed at ${levelLabel(it.level)} preset`}
                   >
-                    Download
-                  </a>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
+                    {levelLabel(it.level)}
+                  </span>
+                </div>
+              }
+              meta={
+                <>
+                  {it.status === 'pending' && 'Queued…'}
+                  {it.status === 'compressing' &&
+                    (it.level === 'high' ? 'Flattening pages…' : 'Recompressing images…')}
+                  {it.status === 'done' && it.newSize !== undefined && (
+                    <>
+                      {formatBytes(it.originalSize)} → {formatBytes(it.newSize)} (
+                      {sizeDelta(it.originalSize, it.newSize)})
+                      {it.note && <span> · {it.note}</span>}
+                    </>
+                  )}
+                  {it.status === 'error' && <ErrorText inline>{it.error}</ErrorText>}
+                </>
+              }
+              href={it.status === 'done' ? it.url : undefined}
+              filename={it.status === 'done' ? it.newName : undefined}
+            />
+          ))}
+        </ResultList>
       )}
     </div>
   );
