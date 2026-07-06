@@ -7,7 +7,14 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   // Public origin used for canonical URLs, OG tags, and the sitemap.
   site: 'https://fromatob.app',
-  integrations: [react(), sitemap()],
+  integrations: [
+    react(),
+    // Exclude the retired Word tool routes: they are noindex redirects to `/`
+    // (see src/pages/word-to-pdf.astro), so they must not appear in the sitemap.
+    sitemap({
+      filter: (page) => !/\/(word-to-pdf|pdf-to-word)$/.test(page),
+    }),
+  ],
   vite: {
     plugins: [tailwindcss()],
     // ES-module worker output is required for our compress worker because

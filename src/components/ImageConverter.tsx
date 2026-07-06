@@ -1,10 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import FileDrop from './FileDrop';
 import FormatPicker from './FormatPicker';
 import PendingFilesConfirmation from './PendingFilesConfirmation';
+import ResultList from './ui/ResultList';
+import DownloadRow from './ui/DownloadRow';
+import ErrorText from './ui/ErrorText';
 import { convertImage, newFilename, type ImageFormat } from '~/lib/imageConvert';
 import { detectImageType, SUPPORTED_INPUT, type DetectedImageType } from '~/lib/fileTypes';
 import { formatBytes, sizeDelta } from '~/lib/format';
+import { useObjectUrls } from '~/lib/useObjectUrls';
 
 const FORMAT_LABEL: Record<ImageFormat, string> = {
   jpeg: 'JPEG',
@@ -32,25 +36,10 @@ export default function ImageConverter() {
   const [quality, setQuality] = useState(0.85);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [items, setItems] = useState<Item[]>([]);
-
-  // Track every blob URL we've ever created so we can revoke them on unmount.
-  const blobUrlsRef = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    const urls = blobUrlsRef.current;
-    return () => {
-      urls.forEach((url) => URL.revokeObjectURL(url));
-      urls.clear();
-    };
-  }, []);
+  const urls = useObjectUrls();
 
   const reset = () => {
-    items.forEach((it) => {
-      if (it.blobUrl) {
-        URL.revokeObjectURL(it.blobUrl);
-        blobUrlsRef.current.delete(it.blobUrl);
-      }
-    });
+    urls.revokeAll();
     setItems([]);
   };
 
@@ -110,8 +99,7 @@ export default function ImageConverter() {
 
         const blob = await convertImage(file, { format: fmtToUse, quality: qualityToUse });
         const newName = newFilename(file.name, fmtToUse);
-        const blobUrl = URL.createObjectURL(blob);
-        blobUrlsRef.current.add(blobUrl);
+        const blobUrl = urls.track(blob);
 
         setItems((prev) =>
           prev.map((it) =>
@@ -168,62 +156,38 @@ export default function ImageConverter() {
       )}
 
       {items.length > 0 && (
-        <section aria-live="polite">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-semibold">
+        <ResultList
+          heading={
+            <>
               Results
               <span className="ml-2 text-sm font-normal" style={{ color: 'var(--color-muted)' }}>
                 {inProgress > 0
                   ? `· converting ${inProgress}…`
                   : `· ${doneCount} of ${items.length} ready`}
               </span>
-            </h2>
-            <button
-              type="button"
-              onClick={reset}
-              className="text-sm underline hover:no-underline"
-              style={{ color: 'var(--color-muted)' }}
-            >
-              Clear all
-            </button>
-          </div>
-
-          <ul className="space-y-2">
-            {items.map((it) => (
-              <li
-                key={it.id}
-                className="flex items-center justify-between gap-4 rounded-lg border p-3"
-                style={{ borderColor: 'var(--color-border)' }}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">
-                    {it.status === 'done' ? it.newName : it.originalName}
-                  </div>
-                  <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
-                    {it.status === 'pending' && 'Queued…'}
-                    {it.status === 'converting' && 'Converting…'}
-                    {it.status === 'done' &&
-                      it.newSize !== undefined &&
-                      `${formatBytes(it.originalSize)} → ${formatBytes(it.newSize)} (${sizeDelta(it.originalSize, it.newSize)})`}
-                    {it.status === 'error' && (
-                      <span style={{ color: '#dc2626' }}>{it.error}</span>
-                    )}
-                  </div>
-                </div>
-                {it.status === 'done' && it.blobUrl && it.newName && (
-                  <a
-                    href={it.blobUrl}
-                    download={it.newName}
-                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-white transition hover:opacity-90"
-                    style={{ background: 'var(--color-accent)' }}
-                  >
-                    Download
-                  </a>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
+            </>
+          }
+          onClear={reset}
+        >
+          {items.map((it) => (
+            <DownloadRow
+              key={it.id}
+              name={it.status === 'done' ? (it.newName ?? it.originalName) : it.originalName}
+              meta={
+                <>
+                  {it.status === 'pending' && 'Queued…'}
+                  {it.status === 'converting' && 'Converting…'}
+                  {it.status === 'done' &&
+                    it.newSize !== undefined &&
+                    `${formatBytes(it.originalSize)} → ${formatBytes(it.newSize)} (${sizeDelta(it.originalSize, it.newSize)})`}
+                  {it.status === 'error' && <ErrorText inline>{it.error}</ErrorText>}
+                </>
+              }
+              href={it.status === 'done' ? it.blobUrl : undefined}
+              filename={it.status === 'done' ? it.newName : undefined}
+            />
+          ))}
+        </ResultList>
       )}
     </div>
   );

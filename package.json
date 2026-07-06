@@ -3,6 +3,7 @@
   "type": "module",
   "version": "0.0.1",
   "private": true,
+  "license": "Apache-2.0",
   "description": "A free, privacy-first file converter that runs entirely in your browser.",
   "scripts": {
     "dev": "astro dev",
