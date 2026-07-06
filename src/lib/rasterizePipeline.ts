@@ -144,17 +144,39 @@ function drawInvisibleText(
   }
 }
 
+/** A 2D context from either an OffscreenCanvas (worker) or a DOM canvas. */
+type Canvas2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+
+/**
+ * A 2D drawing context that works in both a Web Worker (OffscreenCanvas) and
+ * on the main thread (DOM canvas). Preferring OffscreenCanvas is what lets the
+ * whole rasterize pipeline run off the UI thread.
+ */
+function create2DContext(): Canvas2D {
+  if (typeof OffscreenCanvas !== 'undefined') {
+    const ctx = new OffscreenCanvas(1, 1).getContext('2d');
+    if (!ctx) throw new Error('No 2D rendering context (OffscreenCanvas).');
+    return ctx;
+  }
+  if (typeof document !== 'undefined') {
+    const ctx = document.createElement('canvas').getContext('2d');
+    if (!ctx) throw new Error('No 2D rendering context available.');
+    return ctx;
+  }
+  throw new Error('No canvas implementation available in this environment.');
+}
+
 /** Render a single pdf.js page to a white-backed RGBA buffer. */
 function renderPageToPixels(
   srcPage: Awaited<ReturnType<pdfjsLib.PDFDocumentProxy['getPage']>>,
-  canvas: HTMLCanvasElement,
-  ctx: CanvasRenderingContext2D,
+  ctx: Canvas2D,
   renderScale: number,
 ): Promise<{ pixels: Uint8ClampedArray; pxWidth: number; pxHeight: number; pointWidth: number; pointHeight: number }> {
   // Always render unrotated — keeps the text-layer coordinate system simple.
   const baseViewport = srcPage.getViewport({ scale: 1, rotation: 0 });
   const renderViewport = srcPage.getViewport({ scale: renderScale, rotation: 0 });
 
+  const canvas = ctx.canvas;
   canvas.width = Math.ceil(renderViewport.width);
   canvas.height = Math.ceil(renderViewport.height);
   // White background — JPEGs don't have alpha; without this, transparent
@@ -163,7 +185,7 @@ function renderPageToPixels(
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   return srcPage
-    .render({ canvasContext: ctx, viewport: renderViewport })
+    .render({ canvasContext: ctx as CanvasRenderingContext2D, viewport: renderViewport })
     .promise.then(() => ({
       pixels: ctx.getImageData(0, 0, canvas.width, canvas.height).data,
       pxWidth: canvas.width,
@@ -187,14 +209,12 @@ export async function renderPdfToPages(file: File, dpi: number): Promise<Rendere
   const srcPdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
   const renderScale = dpi / 72;
 
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('No 2D rendering context available.');
+  const ctx = create2DContext();
 
   const pages: RenderedPage[] = [];
   for (let i = 1; i <= srcPdf.numPages; i++) {
     const srcPage = await srcPdf.getPage(i);
-    const rendered = await renderPageToPixels(srcPage, canvas, ctx, renderScale);
+    const rendered = await renderPageToPixels(srcPage, ctx, renderScale);
     const textRuns = await extractTextRuns(srcPage);
     pages.push({ ...rendered, textRuns });
     srcPage.cleanup();
@@ -239,14 +259,12 @@ export async function rasterizePdf(
   const srcPdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
   const renderScale = options.dpi / 72;
 
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('No 2D rendering context available.');
+  const ctx = create2DContext();
 
   const encoded: EncodedPage[] = [];
   for (let i = 1; i <= srcPdf.numPages; i++) {
     const srcPage = await srcPdf.getPage(i);
-    const rendered = await renderPageToPixels(srcPage, canvas, ctx, renderScale);
+    const rendered = await renderPageToPixels(srcPage, ctx, renderScale);
     const textRuns = await extractTextRuns(srcPage);
     const jpegBytes = await encodeJpeg(
       rendered.pixels,

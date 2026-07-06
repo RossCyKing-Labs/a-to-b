@@ -4,8 +4,8 @@ import PendingFilesConfirmation from './PendingFilesConfirmation';
 import ResultList from './ui/ResultList';
 import DownloadRow from './ui/DownloadRow';
 import ErrorText from './ui/ErrorText';
-import { compressPdf, isPdf, type CompressLevel } from '~/lib/pdfTools';
-import { compressPdfToTarget } from '~/lib/compressToTarget';
+import { isPdf, type CompressLevel } from '~/lib/pdfTools';
+import { compressToTargetSmart, compressByLevelSmart } from '~/lib/compressClient';
 import { formatBytes, sizeDelta } from '~/lib/format';
 import { useObjectUrls } from '~/lib/useObjectUrls';
 
@@ -144,7 +144,7 @@ export default function CompressPdfConverter() {
       }
       markCompressing(id);
       try {
-        const result = await compressPdfToTarget(file, bytes);
+        const result = await compressToTargetSmart(file, bytes);
         const stem = file.name.replace(/\.pdf$/i, '');
         const newName =
           result.finalSize < result.originalSize ? `${stem}-compressed.pdf` : `${stem}.pdf`;
@@ -186,7 +186,7 @@ export default function CompressPdfConverter() {
       }
       markCompressing(id);
       try {
-        const result = await compressPdf(file, levelToUse);
+        const result = await compressByLevelSmart(file, levelToUse);
         const stem = file.name.replace(/\.pdf$/i, '');
         const newName = result.smallerThanOriginal
           ? `${stem}-compressed.pdf`
