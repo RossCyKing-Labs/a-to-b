@@ -86,4 +86,4 @@ a coffee means a lot and helps justify the hours.
 
 ## License
 
-MIT © 2026 Cheng-Yuan King — see [`LICENSE`](./LICENSE).
+Apache-2.0 © 2026 Cheng-Yuan King — see [`LICENSE`](./LICENSE).
