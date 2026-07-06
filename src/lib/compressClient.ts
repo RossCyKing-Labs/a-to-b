@@ -11,6 +11,7 @@
  */
 import { compressPdfToTarget, type TargetCompressResult } from './compressToTarget';
 import { compressPdf, type CompressLevel, type CompressResult } from './pdfTools';
+import type { CompressProgress, OnCompressProgress } from './compressProgress';
 
 let workerPromise: Promise<Worker> | null = null;
 let nextId = 0;
@@ -49,20 +50,27 @@ interface WorkerRequest {
   level?: CompressLevel;
 }
 
-function runInWorker<T>(request: WorkerRequest): Promise<T> {
+function runInWorker<T>(request: WorkerRequest, onProgress?: OnCompressProgress): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     getWorker().then(
       (worker) => {
         const id = `compress-${++nextId}`;
         const handler = (
           event: MessageEvent<
-            { id: string; ok: true; result: T } | { id: string; ok: false; error: string }
+            | { id: string; progress: CompressProgress }
+            | { id: string; ok: true; result: T }
+            | { id: string; ok: false; error: string }
           >,
         ) => {
-          if (event.data.id !== id) return;
+          const msg = event.data;
+          if (msg.id !== id) return;
+          if ('progress' in msg) {
+            onProgress?.(msg.progress);
+            return; // more messages to come
+          }
           worker.removeEventListener('message', handler);
-          if (event.data.ok) resolve(event.data.result);
-          else reject(new Error(event.data.error));
+          if (msg.ok) resolve(msg.result);
+          else reject(new Error(msg.error));
         };
         worker.addEventListener('message', handler);
         worker.postMessage({ id, ...request }, [request.bytes]);
@@ -76,42 +84,40 @@ function runInWorker<T>(request: WorkerRequest): Promise<T> {
 export async function compressToTargetSmart(
   file: File,
   targetBytes: number,
+  onProgress?: OnCompressProgress,
 ): Promise<TargetCompressResult> {
   if (workerSupported()) {
     try {
       const bytes = await file.arrayBuffer();
-      return await runInWorker<TargetCompressResult>({
-        kind: 'target',
-        bytes,
-        fileName: file.name,
-        targetBytes,
-      });
+      return await runInWorker<TargetCompressResult>(
+        { kind: 'target', bytes, fileName: file.name, targetBytes },
+        onProgress,
+      );
     } catch (err) {
       console.warn('[compressClient] worker failed; running on main thread:', err);
       workerDisabled = true;
     }
   }
-  return compressPdfToTarget(file, targetBytes);
+  return compressPdfToTarget(file, targetBytes, onProgress);
 }
 
 /** Compress by preset level — in the worker when possible, else main thread. */
 export async function compressByLevelSmart(
   file: File,
   level: CompressLevel,
+  onProgress?: OnCompressProgress,
 ): Promise<CompressResult> {
   if (workerSupported()) {
     try {
       const bytes = await file.arrayBuffer();
-      return await runInWorker<CompressResult>({
-        kind: 'level',
-        bytes,
-        fileName: file.name,
-        level,
-      });
+      return await runInWorker<CompressResult>(
+        { kind: 'level', bytes, fileName: file.name, level },
+        onProgress,
+      );
     } catch (err) {
       console.warn('[compressClient] worker failed; running on main thread:', err);
       workerDisabled = true;
     }
   }
-  return compressPdf(file, level);
+  return compressPdf(file, level, onProgress);
 }

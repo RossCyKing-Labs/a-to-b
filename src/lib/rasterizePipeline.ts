@@ -33,6 +33,7 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { encodeJpeg } from './jpegEncoder';
+import type { OnCompressProgress } from './compressProgress';
 
 // One-time worker setup — same pattern pdfTools.ts uses
 if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
@@ -204,15 +205,24 @@ function renderPageToPixels(
  * this tool targets that's tens of MB. Callers handling arbitrary input
  * should pick `dpi` with page count in mind.
  */
-export async function renderPdfToPages(file: File, dpi: number): Promise<RenderedPage[]> {
+export async function renderPdfToPages(
+  file: File,
+  dpi: number,
+  onProgress?: OnCompressProgress,
+): Promise<RenderedPage[]> {
   const buf = await file.arrayBuffer();
   const srcPdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
   const renderScale = dpi / 72;
+  const total = srcPdf.numPages;
 
   const ctx = create2DContext();
 
   const pages: RenderedPage[] = [];
-  for (let i = 1; i <= srcPdf.numPages; i++) {
+  for (let i = 1; i <= total; i++) {
+    onProgress?.({
+      message: total > 1 ? `Rendering page ${i} of ${total}…` : 'Rendering page…',
+      fraction: (i - 1) / total,
+    });
     const srcPage = await srcPdf.getPage(i);
     const rendered = await renderPageToPixels(srcPage, ctx, renderScale);
     const textRuns = await extractTextRuns(srcPage);

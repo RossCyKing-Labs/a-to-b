@@ -25,6 +25,7 @@
  */
 import { compressPdf } from './pdfTools';
 import { encodeJpeg } from './jpegEncoder';
+import type { OnCompressProgress } from './compressProgress';
 import {
   renderPdfToPages,
   assembleRasterizedPdf,
@@ -159,6 +160,7 @@ function toResult(
 export async function compressPdfToTarget(
   file: File,
   targetBytes: number,
+  onProgress?: OnCompressProgress,
 ): Promise<TargetCompressResult> {
   const buf = await file.arrayBuffer();
   const originalSize = buf.byteLength;
@@ -186,6 +188,7 @@ export async function compressPdfToTarget(
   };
 
   // 2. Non-flatten first — keep text/vectors sharp, only recompress images.
+  onProgress?.({ message: 'Recompressing images (keeping text sharp)…' });
   for (const level of NON_FLATTEN_LEVELS) {
     const r = await compressPdf(file, level);
     attempts++;
@@ -209,10 +212,11 @@ export async function compressPdfToTarget(
   let pagesRasterized = 0;
   for (const dpi of DPI_LADDER) {
     // renderPdfToPages throws on undecodable input — let it propagate.
-    const pages = await renderPdfToPages(file, dpi);
+    const pages = await renderPdfToPages(file, dpi, onProgress);
     pagesRasterized = pages.length;
     if (estimatePixelBytes(pages) > PIXEL_BUDGET_BYTES) continue;
 
+    onProgress?.({ message: 'Choosing the sharpest quality that fits…' });
     let fit: Candidate | null = null;
     for (const quality of QUALITY_LADDER) {
       const bytes = await assembleAtQuality(pages, quality);
@@ -236,6 +240,7 @@ export async function compressPdfToTarget(
     }
 
     if (fit) {
+      onProgress?.({ message: 'Finishing…' });
       // qpdf once on the winner — can only shrink it further.
       const { bytes, helped } = await applyQpdf(fit.bytes!);
       const finalBytes = bytes.byteLength >= originalSize ? new Uint8Array(buf) : bytes;

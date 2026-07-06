@@ -19,6 +19,8 @@ interface Item {
   /** Short label of the setting used, shown as a pill (e.g. "≤ 2 MB", "Balanced"). */
   badge: string;
   status: Status;
+  /** Live progress message while status is 'compressing'. */
+  progress?: string;
   newName?: string;
   newSize?: number;
   url?: string;
@@ -124,6 +126,9 @@ export default function CompressPdfConverter() {
   const markCompressing = (id: string) =>
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, status: 'compressing' } : it)));
 
+  const markProgress = (id: string, message: string) =>
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, progress: message } : it)));
+
   const markDone = (id: string, patch: Partial<Item>) =>
     setItems((prev) =>
       prev.map((it) => (it.id === id ? { ...it, status: 'done', ...patch } : it)),
@@ -144,7 +149,7 @@ export default function CompressPdfConverter() {
       }
       markCompressing(id);
       try {
-        const result = await compressToTargetSmart(file, bytes);
+        const result = await compressToTargetSmart(file, bytes, (p) => markProgress(id, p.message));
         const stem = file.name.replace(/\.pdf$/i, '');
         const newName =
           result.finalSize < result.originalSize ? `${stem}-compressed.pdf` : `${stem}.pdf`;
@@ -186,7 +191,7 @@ export default function CompressPdfConverter() {
       }
       markCompressing(id);
       try {
-        const result = await compressByLevelSmart(file, levelToUse);
+        const result = await compressByLevelSmart(file, levelToUse, (p) => markProgress(id, p.message));
         const stem = file.name.replace(/\.pdf$/i, '');
         const newName = result.smallerThanOriginal
           ? `${stem}-compressed.pdf`
@@ -447,7 +452,7 @@ export default function CompressPdfConverter() {
               meta={
                 <>
                   {it.status === 'pending' && 'Queued…'}
-                  {it.status === 'compressing' && 'Shrinking…'}
+                  {it.status === 'compressing' && (it.progress ?? 'Shrinking…')}
                   {it.status === 'done' && it.newSize !== undefined && (
                     <>
                       {formatBytes(it.originalSize)} → {formatBytes(it.newSize)} (

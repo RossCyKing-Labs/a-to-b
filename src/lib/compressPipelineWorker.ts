@@ -27,13 +27,16 @@ type CompressRequest =
 
 self.addEventListener('message', async (event: MessageEvent<CompressRequest>) => {
   const data = event.data;
+  // Forward engine progress to the main thread as it happens.
+  const onProgress = (progress: { message: string; fraction?: number }) =>
+    self.postMessage({ id: data.id, progress });
   try {
     const file = new File([data.bytes], data.fileName, { type: 'application/pdf' });
     if (data.kind === 'target') {
-      const result = await compressPdfToTarget(file, data.targetBytes);
+      const result = await compressPdfToTarget(file, data.targetBytes, onProgress);
       self.postMessage({ id: data.id, ok: true, result });
     } else {
-      const result = await compressPdf(file, data.level);
+      const result = await compressPdf(file, data.level, onProgress);
       self.postMessage({ id: data.id, ok: true, result });
     }
   } catch (err) {
