@@ -4,7 +4,8 @@ test.describe('homepage', () => {
   test('loads with the headline and all live converter cards', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle(/a → b/);
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Convert files');
+    // The homepage leads with the PDF compressor (the #1 use case).
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Make your PDF');
     await expect(page.getByRole('link', { name: /^Image converter/ })).toBeVisible();
     await expect(page.getByRole('link', { name: /^Merge PDF/ })).toBeVisible();
     await expect(page.getByRole('link', { name: /^Split PDF/ })).toBeVisible();
