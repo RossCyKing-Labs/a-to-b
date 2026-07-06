@@ -123,13 +123,17 @@ export async function runQpdfPass(input: Uint8Array): Promise<Uint8Array> {
           '--compress-streams=y',
           '--recompress-flate',
           '--compression-level=9',
-          // Convert non-JPEG raster images (FlateDecode PNG-style) to
-          // JPEG when smaller, skipping tiny icons. We DON'T pass
-          // --oi-jpeg-quality because we already recompressed the JPEGs
-          // we cared about in our pdf-lib pass; qpdf only touches non-JPEG
-          // images with this flag set, so it complements ours instead
-          // of fighting it.
+          // Recompress raster images to JPEG when that's smaller, skipping
+          // tiny icons. Note: --optimize-images touches ALL raster images,
+          // including existing DCTDecode JPEGs — not just FlateDecode ones.
+          // We already recompressed the JPEGs we cared about (in the pdf-lib
+          // / rasterize pass) at our chosen quality, so we pin
+          // --oi-jpeg-quality high (90). qpdf keeps its version only when
+          // smaller, and re-encoding our lower-quality JPEGs at q90 comes
+          // out larger — so our JPEGs are preserved, while genuine wins
+          // (FlateDecode PNG-style images → JPEG) still land.
           '--optimize-images',
+          '--oi-jpeg-quality=90',
           '--oi-min-width=300',
           '--oi-min-height=300',
           // Prune fonts, colorspaces, patterns, etc. that aren't actually
