@@ -291,22 +291,16 @@ interface CompressPreset {
    * into target pixels. 3.0 ≈ 220 DPI (retina-class viewing).
    */
   oversample: number;
-  /**
-   * If a source JPEG's probed quality is already at or below this,
-   * we skip recompression to avoid generational artefacts for no
-   * meaningful byte saving.
-   */
-  skipBelowQuality: number;
 }
 
 const COMPRESS_PRESETS: Record<CompressLevel, CompressPreset> = {
-  // Strong is genuinely aggressive: q=28 produces clearly softer images
-  // on photos, and skipBelowQuality=0 means we always re-encode (the
-  // per-image safety check keeps the original bytes if recompression
-  // would inflate, so worst-case Strong is the same as the input image).
-  low: { quality: 80, maxDim: 2200, oversample: 3.0, skipBelowQuality: 75 },
-  medium: { quality: 65, maxDim: 1600, oversample: 2.5, skipBelowQuality: 60 },
-  high: { quality: 28, maxDim: 900, oversample: 1.8, skipBelowQuality: 0 },
+  // Strong is genuinely aggressive: q=28 produces clearly softer images on
+  // photos. Every image is attempted; the per-image safety check keeps the
+  // original bytes whenever recompression would inflate, so worst-case a
+  // preset is the same as the input image.
+  low: { quality: 80, maxDim: 2200, oversample: 3.0 },
+  medium: { quality: 65, maxDim: 1600, oversample: 2.5 },
+  high: { quality: 28, maxDim: 900, oversample: 1.8 },
 };
 
 export interface CompressResult {
@@ -431,7 +425,7 @@ export async function compressPdf(
   const { analyzeImageRenderSizes, pointsToPixels } = await import(
     './imageRenderAnalyzer'
   );
-  const { encodeJpeg, probeJpegQuality } = await import('./jpegEncoder');
+  const { encodeJpeg } = await import('./jpegEncoder');
   let renderSizes: Awaited<ReturnType<typeof analyzeImageRenderSizes>>;
   try {
     renderSizes = analyzeImageRenderSizes(doc);
@@ -456,12 +450,6 @@ export async function compressPdf(
 
     const jpegBytes = obj.contents;
     if (!jpegBytes || jpegBytes.length === 0) continue;
-
-    // Skip already-aggressive JPEGs — recompressing them just adds noise
-    const sourceQuality = probeJpegQuality(jpegBytes);
-    if (sourceQuality !== null && sourceQuality <= preset.skipBelowQuality) {
-      continue;
-    }
 
     try {
       const blob = new Blob([jpegBytes as BlobPart], { type: 'image/jpeg' });
