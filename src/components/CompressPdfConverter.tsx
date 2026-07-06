@@ -152,11 +152,14 @@ export default function CompressPdfConverter() {
         let note: string;
         if (result.strategy === 'already-small') {
           note = `Already under ${label}`;
-        } else if (result.metTarget) {
+        } else if (!result.metTarget) {
+          note = `Smallest we could reach — still over ${label}`;
+        } else if (result.strategy === 'image-recompress') {
+          // The good case: fit the target without flattening, so text stays crisp.
+          note = 'Text kept sharp · images recompressed';
+        } else {
           note = `${result.pagesRasterized} page${result.pagesRasterized === 1 ? '' : 's'} flattened`;
           if (result.qpdfHelped) note += ' · qpdf saved more';
-        } else {
-          note = `Smallest we could reach — still over ${label}`;
         }
 
         markDone(id, {
