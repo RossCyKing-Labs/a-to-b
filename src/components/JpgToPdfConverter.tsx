@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import FileDrop from './FileDrop';
+import ResultList from './ui/ResultList';
+import DownloadRow from './ui/DownloadRow';
+import ErrorText from './ui/ErrorText';
+import PrimaryButton from './ui/PrimaryButton';
 import {
   imagesToPdf,
   isJpegOrPng,
@@ -7,6 +11,8 @@ import {
   type PageSize,
 } from '~/lib/pdfTools';
 import { formatBytes } from '~/lib/format';
+import { useObjectUrls } from '~/lib/useObjectUrls';
+import { useAsyncTask } from '~/lib/useAsyncTask';
 
 interface InputFile {
   id: string;
@@ -39,26 +45,18 @@ export default function JpgToPdfConverter() {
   const [pageSize, setPageSize] = useState<PageSize>('A4');
   const [orientation, setOrientation] = useState<PageOrientation>('portrait');
   const [result, setResult] = useState<Result | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const blobUrlRef = useRef<string | null>(null);
+  const urls = useObjectUrls();
+  const task = useAsyncTask();
 
-  useEffect(() => {
-    return () => {
-      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
-    };
-  }, []);
-
+  // Any edit to the inputs or page settings invalidates a built result.
   const clearResult = () => {
-    if (blobUrlRef.current) {
-      URL.revokeObjectURL(blobUrlRef.current);
-      blobUrlRef.current = null;
+    if (result) {
+      urls.revokeAll();
+      setResult(null);
     }
-    setResult(null);
   };
 
   const addFiles = async (files: File[]) => {
-    setError(null);
     const accepted: InputFile[] = [];
     const rejected: string[] = [];
     for (const file of files) {
@@ -68,7 +66,11 @@ export default function JpgToPdfConverter() {
         rejected.push(file.name);
       }
     }
-    if (rejected.length) setError(`Skipped (need JPEG or PNG): ${rejected.join(', ')}`);
+    if (rejected.length) {
+      task.fail(`Skipped (need JPEG or PNG): ${rejected.join(', ')}`);
+    } else {
+      task.reset();
+    }
     setInputs((prev) => [...prev, ...accepted]);
     clearResult();
   };
@@ -92,29 +94,19 @@ export default function JpgToPdfConverter() {
 
   const convert = async () => {
     if (inputs.length === 0) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const blob = await imagesToPdf(
-        inputs.map((it) => it.file),
-        pageSize,
-        orientation,
-      );
-      clearResult();
-      const url = URL.createObjectURL(blob);
-      blobUrlRef.current = url;
-      setResult({ name: 'images.pdf', size: blob.size, url });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Conversion failed.');
-    } finally {
-      setBusy(false);
-    }
+    const blob = await task.run(() =>
+      imagesToPdf(inputs.map((it) => it.file), pageSize, orientation),
+    );
+    if (!blob) return;
+    urls.revokeAll();
+    setResult({ name: 'images.pdf', size: blob.size, url: urls.track(blob) });
   };
 
   const reset = () => {
     setInputs([]);
-    setError(null);
-    clearResult();
+    urls.revokeAll();
+    setResult(null);
+    task.reset();
   };
 
   return (
@@ -278,50 +270,26 @@ export default function JpgToPdfConverter() {
             ))}
           </ul>
           {!result && (
-            <button
-              type="button"
-              onClick={convert}
-              disabled={busy}
-              className="mt-4 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
-              style={{ background: 'var(--color-accent)' }}
-            >
-              {busy
+            <PrimaryButton onClick={convert} disabled={task.status === 'working'} className="mt-4">
+              {task.status === 'working'
                 ? 'Building PDF…'
                 : `Build PDF from ${inputs.length} image${inputs.length === 1 ? '' : 's'}`}
-            </button>
+            </PrimaryButton>
           )}
         </section>
       )}
 
-      {error && (
-        <p className="text-sm" style={{ color: '#dc2626' }}>
-          {error}
-        </p>
-      )}
+      {task.error && <ErrorText>{task.error}</ErrorText>}
 
       {result && (
-        <section>
-          <h2 className="mb-2 font-semibold">Result</h2>
-          <div
-            className="flex items-center justify-between gap-4 rounded-lg border p-3"
-            style={{ borderColor: 'var(--color-border)' }}
-          >
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium">{result.name}</div>
-              <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
-                {formatBytes(result.size)}
-              </div>
-            </div>
-            <a
-              href={result.url}
-              download={result.name}
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-white transition hover:opacity-90"
-              style={{ background: 'var(--color-accent)' }}
-            >
-              Download
-            </a>
-          </div>
-        </section>
+        <ResultList heading="Result">
+          <DownloadRow
+            name={result.name}
+            meta={formatBytes(result.size)}
+            href={result.url}
+            filename={result.name}
+          />
+        </ResultList>
       )}
     </div>
   );

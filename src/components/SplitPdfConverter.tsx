@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import FileDrop from './FileDrop';
 import PendingFilesConfirmation from './PendingFilesConfirmation';
+import ResultList from './ui/ResultList';
+import DownloadRow from './ui/DownloadRow';
+import ErrorText from './ui/ErrorText';
 import { isPdf, splitPdfPerPage } from '~/lib/pdfTools';
 import { formatBytes } from '~/lib/format';
-
-type Status = 'idle' | 'splitting' | 'done' | 'error';
+import { useObjectUrls } from '~/lib/useObjectUrls';
+import { useAsyncTask } from '~/lib/useAsyncTask';
 
 interface OutputItem {
   id: string;
@@ -18,30 +21,17 @@ interface OutputItem {
  * own downloadable file.
  */
 export default function SplitPdfConverter() {
-  const [status, setStatus] = useState<Status>('idle');
-  const [error, setError] = useState<string | null>(null);
   const [sourceName, setSourceName] = useState<string | null>(null);
   const [outputs, setOutputs] = useState<OutputItem[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const urlsRef = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    const urls = urlsRef.current;
-    return () => {
-      urls.forEach((u) => URL.revokeObjectURL(u));
-      urls.clear();
-    };
-  }, []);
+  const urls = useObjectUrls();
+  const task = useAsyncTask();
 
   const reset = () => {
-    outputs.forEach((o) => {
-      URL.revokeObjectURL(o.url);
-      urlsRef.current.delete(o.url);
-    });
+    urls.revokeAll();
     setOutputs([]);
-    setStatus('idle');
-    setError(null);
     setSourceName(null);
+    task.reset();
   };
 
   // Files chosen go into a "pending" queue first — they're not split
@@ -50,7 +40,7 @@ export default function SplitPdfConverter() {
     if (files.length === 0) return;
     // Split is single-file; if the user dropped multiple, only stage the first.
     setPendingFiles([files[0]]);
-    setError(null);
+    task.reset();
   };
 
   const handleCancel = () => {
@@ -63,25 +53,20 @@ export default function SplitPdfConverter() {
     setPendingFiles([]);
     reset();
     if (!(await isPdf(file))) {
-      setError(`${file.name} is not a PDF.`);
-      setStatus('error');
+      task.fail(`${file.name} is not a PDF.`);
       return;
     }
     setSourceName(file.name);
-    setStatus('splitting');
-    try {
-      const pages = await splitPdfPerPage(file);
-      const items: OutputItem[] = pages.map((p) => {
-        const url = URL.createObjectURL(p.blob);
-        urlsRef.current.add(url);
-        return { id: crypto.randomUUID(), name: p.name, size: p.blob.size, url };
-      });
-      setOutputs(items);
-      setStatus('done');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Split failed.');
-      setStatus('error');
-    }
+    const pages = await task.run(() => splitPdfPerPage(file));
+    if (!pages) return;
+    setOutputs(
+      pages.map((p) => ({
+        id: crypto.randomUUID(),
+        name: p.name,
+        size: p.blob.size,
+        url: urls.track(p.blob),
+      })),
+    );
   };
 
   return (
@@ -97,64 +82,39 @@ export default function SplitPdfConverter() {
         <PendingFilesConfirmation
           files={pendingFiles}
           verb="split"
-          disabled={status === 'splitting'}
+          disabled={task.status === 'working'}
           onConfirm={handleConfirm}
           onCancel={handleCancel}
         />
       )}
 
-      {status === 'splitting' && sourceName && (
+      {task.status === 'working' && sourceName && (
         <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
           Splitting {sourceName}…
         </p>
       )}
 
-      {error && (
-        <p className="text-sm" style={{ color: '#dc2626' }}>
-          {error}
-        </p>
-      )}
+      {task.error && <ErrorText>{task.error}</ErrorText>}
 
       {outputs.length > 0 && (
-        <section aria-live="polite">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-semibold">
+        <ResultList
+          heading={
+            <>
               {outputs.length} page{outputs.length === 1 ? '' : 's'} ready
-            </h2>
-            <button
-              type="button"
-              onClick={reset}
-              className="text-sm underline hover:no-underline"
-              style={{ color: 'var(--color-muted)' }}
-            >
-              Clear all
-            </button>
-          </div>
-          <ul className="space-y-2">
-            {outputs.map((it) => (
-              <li
-                key={it.id}
-                className="flex items-center justify-between gap-4 rounded-lg border p-3"
-                style={{ borderColor: 'var(--color-border)' }}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{it.name}</div>
-                  <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
-                    {formatBytes(it.size)}
-                  </div>
-                </div>
-                <a
-                  href={it.url}
-                  download={it.name}
-                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-white transition hover:opacity-90"
-                  style={{ background: 'var(--color-accent)' }}
-                >
-                  Download
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
+            </>
+          }
+          onClear={reset}
+        >
+          {outputs.map((it) => (
+            <DownloadRow
+              key={it.id}
+              name={it.name}
+              meta={formatBytes(it.size)}
+              href={it.url}
+              filename={it.name}
+            />
+          ))}
+        </ResultList>
       )}
     </div>
   );

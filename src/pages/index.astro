@@ -14,7 +14,9 @@ interface Category {
   tools: Tool[];
 }
 
-const categories: Category[] = [
+// Compress PDF is the hero — it's what most people come here for (shrinking a
+// PDF to fit an upload limit). Every other tool is listed below as an extra.
+const otherCategories: Category[] = [
   {
     title: 'Image',
     description: 'Convert between common image formats.',
@@ -23,7 +25,7 @@ const categories: Category[] = [
     ],
   },
   {
-    title: 'PDF tools',
+    title: 'More PDF tools',
     description: 'Reshape PDFs without ever uploading them.',
     tools: [
       { title: 'Merge PDF', formats: 'Combine into one', href: '/merge-pdf' },
@@ -31,55 +33,91 @@ const categories: Category[] = [
       { title: 'JPG → PDF', formats: 'Images to PDF', href: '/jpg-to-pdf' },
       { title: 'PDF → JPG', formats: 'Page as image', href: '/pdf-to-jpg' },
       { title: 'Rotate PDF', formats: '90° · 180° · 270°', href: '/rotate-pdf' },
-      { title: 'Compress PDF', formats: 'Shrink file size', href: '/compress-pdf' },
     ],
   },
 ];
 ---
 
 <BaseLayout
-  title="Free file converter that runs in your browser · a → b"
-  description="Convert images and PDFs entirely in your browser — free, no uploads, no tracking, no ads. Compress, merge, split, and rotate PDFs; convert PNG, JPEG, and WebP."
+  title="Compress PDF free in your browser · a → b"
+  description="Make a PDF smaller to fit upload limits — free, in your browser, no uploads, no tracking, no ads. Plus merge, split, rotate PDFs and convert PNG, JPEG, and WebP."
 >
-  <section class="py-12 text-center sm:py-16">
-    <h1 class="mb-4 text-4xl font-bold tracking-tight sm:text-6xl">
-      Convert files.
-      <span style="color: var(--color-accent)">Privately.</span>
+  <section class="py-10 text-center sm:py-12">
+    <h1 class="mb-3 text-4xl font-bold tracking-tight sm:text-5xl">
+      Make your PDF
+      <span style="color: var(--color-accent)">smaller.</span>
     </h1>
-    <p class="mx-auto max-w-xl text-lg sm:text-xl" style="color: var(--color-muted)">
-      A free file converter that runs entirely in your browser. Your files never leave your device.
+    <p class="mx-auto max-w-xl text-lg" style="color: var(--color-muted)">
+      Shrink a PDF so it fits an upload limit — job applications, forms, and email
+      attachments that only accept small files. It all happens in your browser; your file
+      never leaves your device.
     </p>
   </section>
 
-  {
-    categories.map((cat) => (
-      <section class="mt-10">
-        <div class="mb-4 flex items-baseline justify-between gap-4">
-          <h2 class="text-xl font-bold tracking-tight">{cat.title}</h2>
-          <p class="text-sm" style="color: var(--color-muted)">
-            {cat.description}
+  <!-- Hero: the PDF compressor, the tool most people are here for. -->
+  <section class="mb-6">
+    <a
+      href="/compress-pdf"
+      class="block rounded-2xl border-2 p-8 transition hover:scale-[1.01] hover:shadow-md sm:p-10"
+      style="border-color: var(--color-accent); background: var(--color-accent-soft)"
+    >
+      <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 class="text-2xl font-bold tracking-tight sm:text-3xl">Compress PDF</h2>
+          <p class="mt-2 max-w-lg text-base" style="color: var(--color-muted)">
+            Reduce a PDF's file size — great for getting under a 2&nbsp;MB (or smaller)
+            upload limit. Text stays selectable, and you choose how hard to compress.
           </p>
         </div>
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {cat.tools.map((tool) => (
-            <a
-              href={tool.href}
-              class="block rounded-xl border p-5 transition hover:scale-[1.02] hover:shadow-sm"
-              style="border-color: var(--color-border)"
-            >
-              <h3 class="mb-1 font-semibold">{tool.title}</h3>
-              <p class="text-sm" style="color: var(--color-muted)">
-                {tool.formats}
-              </p>
-              <p class="mt-3 text-xs font-medium" style="color: var(--color-accent)">
-                Open →
-              </p>
-            </a>
-          ))}
+        <span
+          class="shrink-0 rounded-lg px-5 py-3 text-sm font-semibold text-white"
+          style="background: var(--color-accent)"
+        >
+          Compress a PDF →
+        </span>
+      </div>
+    </a>
+  </section>
+
+  <section class="mt-14">
+    <div class="mb-4">
+      <h2 class="text-xl font-bold tracking-tight">More tools</h2>
+      <p class="text-sm" style="color: var(--color-muted)">
+        Other free, in-browser converters — same privacy promise, no uploads.
+      </p>
+    </div>
+    {
+      otherCategories.map((cat) => (
+        <div class="mt-6">
+          <div class="mb-3 flex items-baseline justify-between gap-4">
+            <h3 class="text-sm font-semibold tracking-wide uppercase" style="color: var(--color-muted)">
+              {cat.title}
+            </h3>
+            <p class="text-sm" style="color: var(--color-muted)">
+              {cat.description}
+            </p>
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {cat.tools.map((tool) => (
+              <a
+                href={tool.href}
+                class="block rounded-xl border p-5 transition hover:scale-[1.02] hover:shadow-sm"
+                style="border-color: var(--color-border)"
+              >
+                <h4 class="mb-1 font-semibold">{tool.title}</h4>
+                <p class="text-sm" style="color: var(--color-muted)">
+                  {tool.formats}
+                </p>
+                <p class="mt-3 text-xs font-medium" style="color: var(--color-accent)">
+                  Open →
+                </p>
+              </a>
+            ))}
+          </div>
         </div>
-      </section>
-    ))
-  }
+      ))
+    }
+  </section>
 
   <section class="mt-20 grid gap-6 sm:grid-cols-3">
     <div>
