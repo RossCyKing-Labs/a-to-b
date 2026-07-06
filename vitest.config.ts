@@ -8,6 +8,7 @@ import react from '@vitejs/plugin-react';
  * Layout:
  *  - tests/unit         pure logic (format, fileTypes…)
  *  - tests/components   React component tests via @testing-library/react
+ *  - tests/helpers      synthetic PDF fixtures + their self-tests
  *  - tests/e2e          Playwright tests (NOT picked up here — see playwright.config.ts)
  */
 export default getViteConfig({
@@ -16,7 +17,11 @@ export default getViteConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
-    include: ['tests/unit/**/*.test.{ts,tsx}', 'tests/components/**/*.test.{ts,tsx}'],
+    include: [
+      'tests/unit/**/*.test.{ts,tsx}',
+      'tests/components/**/*.test.{ts,tsx}',
+      'tests/helpers/**/*.test.{ts,tsx}',
+    ],
     css: true,
   },
 });

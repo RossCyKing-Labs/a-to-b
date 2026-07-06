@@ -1,7 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import FileDrop from './FileDrop';
+import ResultList from './ui/ResultList';
+import DownloadRow from './ui/DownloadRow';
+import ErrorText from './ui/ErrorText';
+import PrimaryButton from './ui/PrimaryButton';
 import { isPdf, mergePdfs } from '~/lib/pdfTools';
 import { formatBytes } from '~/lib/format';
+import { useObjectUrls } from '~/lib/useObjectUrls';
+import { useAsyncTask } from '~/lib/useAsyncTask';
 
 interface InputFile {
   id: string;
@@ -21,18 +27,18 @@ interface Result {
 export default function MergePdfConverter() {
   const [inputs, setInputs] = useState<InputFile[]>([]);
   const [result, setResult] = useState<Result | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const blobUrlRef = useRef<string | null>(null);
+  const urls = useObjectUrls();
+  const task = useAsyncTask();
 
-  useEffect(() => {
-    return () => {
-      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
-    };
-  }, []);
+  // Any edit to the input set invalidates a previously-merged result.
+  const clearResult = () => {
+    if (result) {
+      urls.revokeAll();
+      setResult(null);
+    }
+  };
 
   const addFiles = async (files: File[]) => {
-    setError(null);
     const accepted: InputFile[] = [];
     const rejected: string[] = [];
     for (const file of files) {
@@ -43,21 +49,17 @@ export default function MergePdfConverter() {
       }
     }
     if (rejected.length) {
-      setError(`Skipped (not PDFs): ${rejected.join(', ')}`);
+      task.fail(`Skipped (not PDFs): ${rejected.join(', ')}`);
+    } else {
+      task.reset();
     }
     setInputs((prev) => [...prev, ...accepted]);
-    if (result) {
-      URL.revokeObjectURL(result.url);
-      setResult(null);
-    }
+    clearResult();
   };
 
   const remove = (id: string) => {
     setInputs((prev) => prev.filter((it) => it.id !== id));
-    if (result) {
-      URL.revokeObjectURL(result.url);
-      setResult(null);
-    }
+    clearResult();
   };
 
   const move = (id: string, direction: -1 | 1) => {
@@ -69,37 +71,22 @@ export default function MergePdfConverter() {
       [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
       return arr;
     });
-    if (result) {
-      URL.revokeObjectURL(result.url);
-      setResult(null);
-    }
+    clearResult();
   };
 
   const merge = async () => {
     if (inputs.length < 2) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const blob = await mergePdfs(inputs.map((it) => it.file));
-      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
-      const url = URL.createObjectURL(blob);
-      blobUrlRef.current = url;
-      setResult({ name: 'merged.pdf', size: blob.size, url });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Merge failed.');
-    } finally {
-      setBusy(false);
-    }
+    const blob = await task.run(() => mergePdfs(inputs.map((it) => it.file)));
+    if (!blob) return;
+    urls.revokeAll();
+    setResult({ name: 'merged.pdf', size: blob.size, url: urls.track(blob) });
   };
 
   const reset = () => {
     setInputs([]);
-    setError(null);
-    if (blobUrlRef.current) {
-      URL.revokeObjectURL(blobUrlRef.current);
-      blobUrlRef.current = null;
-    }
+    urls.revokeAll();
     setResult(null);
+    task.reset();
   };
 
   return (
@@ -193,48 +180,24 @@ export default function MergePdfConverter() {
           </ul>
 
           {inputs.length >= 2 && !result && (
-            <button
-              type="button"
-              onClick={merge}
-              disabled={busy}
-              className="mt-4 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
-              style={{ background: 'var(--color-accent)' }}
-            >
-              {busy ? 'Merging…' : `Merge ${inputs.length} PDFs`}
-            </button>
+            <PrimaryButton onClick={merge} disabled={task.status === 'working'} className="mt-4">
+              {task.status === 'working' ? 'Merging…' : `Merge ${inputs.length} PDFs`}
+            </PrimaryButton>
           )}
         </section>
       )}
 
-      {error && (
-        <p className="text-sm" style={{ color: '#dc2626' }}>
-          {error}
-        </p>
-      )}
+      {task.error && <ErrorText>{task.error}</ErrorText>}
 
       {result && (
-        <section>
-          <h2 className="mb-2 font-semibold">Result</h2>
-          <div
-            className="flex items-center justify-between gap-4 rounded-lg border p-3"
-            style={{ borderColor: 'var(--color-border)' }}
-          >
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium">{result.name}</div>
-              <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
-                {formatBytes(result.size)}
-              </div>
-            </div>
-            <a
-              href={result.url}
-              download={result.name}
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-white transition hover:opacity-90"
-              style={{ background: 'var(--color-accent)' }}
-            >
-              Download
-            </a>
-          </div>
-        </section>
+        <ResultList heading="Result">
+          <DownloadRow
+            name={result.name}
+            meta={formatBytes(result.size)}
+            href={result.url}
+            filename={result.name}
+          />
+        </ResultList>
       )}
     </div>
   );

@@ -20,6 +20,7 @@
 import { PDFDocument, PDFName, PDFNumber, PDFRawStream, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import type { OnCompressProgress } from './compressProgress';
 
 // One-time worker setup for pdf.js — same pattern as src/lib/pdfToDocx.ts
 if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
@@ -410,15 +411,17 @@ function dropBloat(doc: PDFDocument, aggressive: boolean): boolean {
 export async function compressPdf(
   file: File,
   level: CompressLevel = 'medium',
+  onProgress?: OnCompressProgress,
 ): Promise<CompressResult> {
   const buf = await file.arrayBuffer();
   const originalSize = buf.byteLength;
 
   // ── Strong: completely different strategy ──
   if (level === 'high') {
-    return compressViaRasterize(file, buf, originalSize);
+    return compressViaRasterize(file, buf, originalSize, onProgress);
   }
 
+  onProgress?.({ message: 'Recompressing images…' });
   const preset = COMPRESS_PRESETS[level];
   const doc = await PDFDocument.load(buf, { ignoreEncryption: false });
 
@@ -538,6 +541,7 @@ export async function compressPdf(
   const afterPdfLibSize = pdfLibBytes.byteLength;
 
   // ── Stage 3: qpdf structural pass (off-thread) ──
+  onProgress?.({ message: 'Finishing…' });
   let bestBytes: Uint8Array = pdfLibBytes;
   let qpdfPassRan = false;
   let qpdfHelped = false;
@@ -613,8 +617,10 @@ async function compressViaRasterize(
   file: File,
   buf: ArrayBuffer,
   originalSize: number,
+  onProgress?: OnCompressProgress,
 ): Promise<CompressResult> {
   const { rasterizePdf } = await import('./rasterizePipeline');
+  onProgress?.({ message: 'Flattening pages…' });
   // Tuned for "iLovePDF Recommended" parity: 144 DPI is retina-class
   // sharpness, q55 is the visual-equivalence sweet spot.
   const rasterized = await rasterizePdf(file, { dpi: 144, jpegQuality: 55 });
