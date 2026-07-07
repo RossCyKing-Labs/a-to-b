@@ -6,13 +6,16 @@ test.describe('homepage', () => {
     await expect(page).toHaveTitle(/a → b/);
     // The homepage leads with the PDF compressor (the #1 use case).
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Make your PDF');
-    await expect(page.getByRole('link', { name: /^Image converter/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: /^Merge PDF/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: /^Split PDF/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: /^JPG → PDF/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: /^PDF → JPG/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: /^Rotate PDF/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: /^Compress PDF/ })).toBeVisible();
+    // Scope to <main>: the header's Tools dropdown and the footer also link to
+    // every tool, so a page-wide role query would match multiple elements.
+    const main = page.locator('main');
+    await expect(main.getByRole('link', { name: /^Image converter/ })).toBeVisible();
+    await expect(main.getByRole('link', { name: /^Merge PDF/ })).toBeVisible();
+    await expect(main.getByRole('link', { name: /^Split PDF/ })).toBeVisible();
+    await expect(main.getByRole('link', { name: /^JPG → PDF/ })).toBeVisible();
+    await expect(main.getByRole('link', { name: /^PDF → JPG/ })).toBeVisible();
+    await expect(main.getByRole('link', { name: /^Rotate PDF/ })).toBeVisible();
+    await expect(main.getByRole('link', { name: /^Compress PDF/ })).toBeVisible();
   });
 
   test('Word↔PDF routes redirect home', async ({ page }) => {
@@ -25,9 +28,9 @@ test.describe('homepage', () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test('footer Buy me a coffee link points to the right Ko-fi page', async ({ page }) => {
+  test('footer Ko-fi link points to the right page', async ({ page }) => {
     await page.goto('/');
-    const link = page.getByRole('link', { name: /buy me a coffee/i });
+    const link = page.locator('footer').getByRole('link', { name: /^Ko-fi$/ });
     await expect(link).toBeVisible();
     await expect(link).toHaveAttribute('href', 'https://ko-fi.com/rosscyking');
   });
