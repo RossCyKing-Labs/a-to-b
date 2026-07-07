@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { ImageFormat } from '~/lib/imageConvert';
 
 interface FormatPickerProps {
@@ -13,32 +14,19 @@ const FORMATS: { id: ImageFormat; label: string; desc: string }[] = [
   { id: 'webp', label: 'WebP', desc: 'Modern, ~30% smaller than JPEG.' },
 ];
 
-export default function FormatPicker({
-  value,
-  onChange,
-  quality,
-  onQualityChange,
-}: FormatPickerProps) {
+export default function FormatPicker({ value, onChange, quality, onQualityChange }: FormatPickerProps) {
   const showQuality = value === 'jpeg' || value === 'webp';
 
   return (
-    <div className="space-y-5">
-      <fieldset>
-        <legend className="mb-2 text-sm font-medium">Output format</legend>
-        <div className="grid gap-2 sm:grid-cols-3">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <fieldset style={{ border: 'none', margin: 0, padding: 0 }}>
+        <legend style={label}>Output format</legend>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
           {FORMATS.map((fmt) => {
             const selected = value === fmt.id;
             const inputId = `fmt-${fmt.id}`;
             return (
-              <label
-                key={fmt.id}
-                htmlFor={inputId}
-                className="block cursor-pointer rounded-lg border p-3 transition"
-                style={{
-                  borderColor: selected ? 'var(--color-accent)' : 'var(--color-border)',
-                  background: selected ? 'var(--color-accent-soft)' : 'transparent',
-                }}
-              >
+              <label key={fmt.id} htmlFor={inputId} style={card(selected)}>
                 <input
                   id={inputId}
                   type="radio"
@@ -48,10 +36,8 @@ export default function FormatPicker({
                   checked={selected}
                   onChange={() => onChange(fmt.id)}
                 />
-                <div className="font-medium">{fmt.label}</div>
-                <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
-                  {fmt.desc}
-                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: selected ? 'var(--accent-soft-text)' : 'var(--ink)' }}>{fmt.label}</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3, lineHeight: 1.4 }}>{fmt.desc}</div>
               </label>
             );
           })}
@@ -60,9 +46,9 @@ export default function FormatPicker({
 
       {showQuality && (
         <div>
-          <label htmlFor="quality" className="flex items-center justify-between text-sm font-medium">
+          <label htmlFor="quality" style={{ ...label, display: 'flex', justifyContent: 'space-between', textTransform: 'none', letterSpacing: 'normal', fontSize: 13.5 }}>
             <span>Quality</span>
-            <span style={{ color: 'var(--color-muted)' }}>{Math.round(quality * 100)}%</span>
+            <span style={{ color: 'var(--muted)' }}>{Math.round(quality * 100)}%</span>
           </label>
           <input
             id="quality"
@@ -72,14 +58,32 @@ export default function FormatPicker({
             step="0.05"
             value={quality}
             onChange={(e) => onQualityChange(parseFloat(e.target.value))}
-            className="mt-2 w-full"
-            style={{ accentColor: 'var(--color-accent)' }}
+            style={{ marginTop: 8, width: '100%', accentColor: 'var(--accent)' }}
           />
-          <p className="mt-1 text-xs" style={{ color: 'var(--color-muted)' }}>
-            Higher quality = larger file. 85% is a good default for photos.
-          </p>
+          <p style={{ marginTop: 4, fontSize: 12, color: 'var(--muted)' }}>Higher quality = larger file. 85% is a good default for photos.</p>
         </div>
       )}
     </div>
   );
+}
+
+const label: CSSProperties = {
+  display: 'block',
+  fontSize: 11.5,
+  fontWeight: 600,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+  color: 'var(--muted)',
+  marginBottom: 10,
+};
+function card(selected: boolean): CSSProperties {
+  return {
+    display: 'block',
+    cursor: 'pointer',
+    borderRadius: 10,
+    padding: '11px 13px',
+    border: selected ? '1px solid var(--accent)' : '1px solid var(--hair-2)',
+    background: selected ? 'var(--accent-soft-bg)' : 'var(--card)',
+    transition: 'border-color 160ms, background 160ms',
+  };
 }

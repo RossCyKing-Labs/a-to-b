@@ -1,52 +1,28 @@
 ---
-import BaseLayout from '~/layouts/BaseLayout.astro';
+import ToolLayout from '~/layouts/ToolLayout.astro';
 import SplitPdfConverter from '~/components/SplitPdfConverter';
-import Faq from '~/components/Faq.astro';
+
+const howSteps = [
+  { n: '01', title: 'Drop your PDF', body: 'It loads into this page. Nothing is uploaded to a server.' },
+  { n: '02', title: 'Split locally', body: 'The work runs in your browser, on your CPU, in memory.' },
+  { n: '03', title: 'Download the pages', body: 'Save each page back to your machine. We never see the file.' },
+];
+const faqItems = [
+  { q: 'What do I get back?', a: 'One PDF per page, each downloadable on its own. Nothing is re-compressed — pages are copied as-is.' },
+  { q: 'Does splitting reduce quality?', a: 'No — the selected pages are copied into new PDFs exactly as they were.' },
+  { q: 'Are my PDFs uploaded?', a: 'Never. Splitting runs fully on your device.' },
+];
 ---
 
-<BaseLayout
-  title="Split PDF — one file per page · a → b"
-  description="Split a PDF into individual single-page PDFs, free and entirely in your browser. Your file is never uploaded. No accounts, no limits, no ads."
+<ToolLayout
+  title="Split PDF — extract pages in your browser · a → b"
+  description="Split a PDF into single pages, free and entirely in your browser. Files are never uploaded. No accounts, no limits, no ads."
+  h1="Split a PDF"
+  desc="Break a PDF into one downloadable file per page."
+  howSteps={howSteps}
+  faqItems={faqItems}
 >
-  <header class="mb-8">
-    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Split PDF</h1>
-    <p class="mt-2 text-lg" style="color: var(--color-muted)">
-      Split one PDF into individual pages — entirely in your browser.
-    </p>
-  </header>
-
-  <SplitPdfConverter client:load />
-
-  <aside
-    class="mt-12 rounded-xl border p-6"
-    style="border-color: var(--color-border); background: var(--color-accent-soft)"
-  >
-    <h2
-      class="mb-2 text-xs font-semibold tracking-wider uppercase"
-      style="color: var(--color-accent)"
-    >
-      How this works
-    </h2>
-    <p class="text-sm leading-relaxed">
-      Each page is copied into its own single-page PDF locally. Original formatting, fonts, and
-      selectable text are preserved. Your file never leaves your device.
-    </p>
-  </aside>
-
-  <Faq
-    items={[
-      {
-        q: 'What does splitting do?',
-        a: 'It turns one PDF into separate single-page PDFs — one downloadable file per page.',
-      },
-      {
-        q: 'Are my files uploaded?',
-        a: 'No. Splitting runs in your browser; your PDF never leaves your device.',
-      },
-      {
-        q: 'Is quality and text preserved?',
-        a: 'Yes. Each page keeps its original formatting, fonts, and selectable text — nothing is rasterized.',
-      },
-    ]}
-  />
-</BaseLayout>
+  <div style="margin: 22px 0 8px;">
+    <SplitPdfConverter client:load />
+  </div>
+</ToolLayout>

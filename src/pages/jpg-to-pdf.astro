@@ -1,52 +1,28 @@
 ---
-import BaseLayout from '~/layouts/BaseLayout.astro';
+import ToolLayout from '~/layouts/ToolLayout.astro';
 import JpgToPdfConverter from '~/components/JpgToPdfConverter';
-import Faq from '~/components/Faq.astro';
+
+const howSteps = [
+  { n: '01', title: 'Add your images', body: 'They load into this page. Nothing is uploaded to a server.' },
+  { n: '02', title: 'Build the PDF locally', body: 'The work runs in your browser, on your CPU, in memory.' },
+  { n: '03', title: 'Download the result', body: 'Save the PDF back to your machine. We never see it.' },
+];
+const faqItems = [
+  { q: 'Can I combine many photos?', a: 'Yes — select several images and they become pages in one PDF, in the order you choose.' },
+  { q: 'Will the images be compressed?', a: 'Only lightly, to keep the PDF a reasonable size. You stay in control.' },
+  { q: 'Do my images leave the device?', a: 'No — the PDF is built in your browser and never uploaded.' },
+];
 ---
 
-<BaseLayout
-  title="JPG to PDF — images to PDF in-browser · a → b"
-  description="Convert JPG and PNG images into a single PDF, free, in your browser. Files never leave your device. No accounts, no limits, no ads."
+<ToolLayout
+  title="JPG to PDF — images to PDF in your browser · a → b"
+  description="Turn JPG and PNG images into a single PDF, free and entirely in your browser. Files are never uploaded. No accounts, no limits, no ads."
+  h1="JPG to PDF"
+  desc="Turn photos into one shareable PDF."
+  howSteps={howSteps}
+  faqItems={faqItems}
 >
-  <header class="mb-8">
-    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">JPG → PDF</h1>
-    <p class="mt-2 text-lg" style="color: var(--color-muted)">
-      Combine images into a single PDF — entirely in your browser.
-    </p>
-  </header>
-
-  <JpgToPdfConverter client:load />
-
-  <aside
-    class="mt-12 rounded-xl border p-6"
-    style="border-color: var(--color-border); background: var(--color-accent-soft)"
-  >
-    <h2
-      class="mb-2 text-xs font-semibold tracking-wider uppercase"
-      style="color: var(--color-accent)"
-    >
-      How this works
-    </h2>
-    <p class="text-sm leading-relaxed">
-      Each image is embedded into a new PDF page locally via <code>pdf-lib</code>. Original image
-      quality is preserved. Your files never touch a server.
-    </p>
-  </aside>
-
-  <Faq
-    items={[
-      {
-        q: 'Which image formats can I turn into a PDF?',
-        a: 'JPG and PNG. Drop several at once and drag them to set the page order.',
-      },
-      {
-        q: 'Can I choose the page size?',
-        a: 'Yes — A4, US Letter, or “fit to image”. Images are scaled to fit while keeping their aspect ratio.',
-      },
-      {
-        q: 'Are my images uploaded?',
-        a: 'No. The PDF is assembled in your browser; your images never leave your device.',
-      },
-    ]}
-  />
-</BaseLayout>
+  <div style="margin: 22px 0 8px;">
+    <JpgToPdfConverter client:load />
+  </div>
+</ToolLayout>

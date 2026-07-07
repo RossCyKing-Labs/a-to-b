@@ -32,7 +32,7 @@ function createPngFile(): string {
 test.describe('image converter', () => {
   test('renders the converter UI', async ({ page }) => {
     await page.goto('/image');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Image converter');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Convert an image');
     await expect(page.getByText('Drop images here')).toBeVisible();
   });
 
@@ -71,7 +71,7 @@ test.describe('image converter', () => {
     await input.setInputFiles(fixture);
 
     // Confirmation panel appears with a "Convert file" button.
-    const confirmButton = page.getByRole('button', { name: /^convert file$/i });
+    const confirmButton = page.getByRole('button', { name: /^convert file/i });
     await expect(confirmButton).toBeVisible({ timeout: 5000 });
     await confirmButton.click();
 

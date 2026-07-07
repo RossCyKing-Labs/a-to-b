@@ -1,51 +1,21 @@
+import type { CSSProperties } from 'react';
 import { formatBytes } from '~/lib/format';
 
 interface PendingFilesConfirmationProps {
-  /** The files the user has staged but not yet processed. */
   files: File[];
-  /**
-   * Verb used in the heading ("Ready to {verb}") and primary button text
-   * ("{Verb} N files"). Lowercase — we capitalize for the button.
-   */
+  /** Verb for the heading ("Ready to {verb}") and button ("{Verb} N files"). */
   verb: string;
-  /**
-   * Optional accent-color pill shown in the top-right of the panel — used
-   * to surface the relevant setting (compression level, rotation amount,
-   * target image format, etc.) so the user knows what they're confirming.
-   */
+  /** Optional accent pill surfacing the relevant setting (level, rotation…). */
   badge?: string;
-  /**
-   * Optional small reminder text shown next to the buttons. Use this to
-   * point the user back to settings they can adjust before confirming.
-   */
+  /** Optional reminder text next to the buttons. */
   hint?: string;
-  /** Disable the buttons (e.g. while a previous batch is still processing). */
   disabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
 /**
- * Reusable "you've staged some files — confirm or cancel" panel.
- *
- * Each converter that benefits from a deliberate confirmation step (instead
- * of starting work the moment files are dropped) wraps its FileDrop output
- * in this component. The pattern is:
- *
- *     {pendingFiles.length === 0
- *       ? <FileDrop onFiles={setPendingFiles}>...</FileDrop>
- *       : <PendingFilesConfirmation
- *           files={pendingFiles}
- *           verb="compress"
- *           badge={levelLabel}
- *           onConfirm={handleConfirm}
- *           onCancel={() => setPendingFiles([])}
- *         />
- *     }
- *
- * Keeping this as a single component means a future tweak (e.g. different
- * button color, additional info, a checkbox for "remember my choice") is
- * a one-file change across all six tools.
+ * "You've staged some files — confirm or cancel" panel, in the polished design.
  */
 export default function PendingFilesConfirmation({
   files,
@@ -58,81 +28,99 @@ export default function PendingFilesConfirmation({
 }: PendingFilesConfirmationProps) {
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
   const Verb = verb.charAt(0).toUpperCase() + verb.slice(1);
-  const noun =
-    files.length === 1 ? 'file' : `${files.length} files`;
+  const noun = files.length === 1 ? 'file' : `${files.length} files`;
 
   return (
-    <section
-      aria-live="polite"
-      className="rounded-xl border p-4"
-      style={{
-        borderColor: 'var(--color-accent)',
-        background: 'var(--color-accent-soft)',
-      }}
-    >
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-base font-semibold">
+    <section aria-live="polite" style={panel}>
+      <div style={headRow}>
+        <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', margin: 0 }}>
           Ready to {verb}
-          <span
-            className="ml-2 text-sm font-normal"
-            style={{ color: 'var(--color-muted)' }}
-          >
-            · {files.length} file{files.length === 1 ? '' : 's'} ·{' '}
-            {formatBytes(totalSize)}
+          <span style={{ color: 'var(--muted)', fontWeight: 400, marginLeft: 8, fontSize: 13 }}>
+            · {files.length} file{files.length === 1 ? '' : 's'} · {formatBytes(totalSize)}
           </span>
         </h2>
-        {badge && (
-          <span
-            className="rounded-full px-2 py-0.5 text-xs font-medium"
-            style={{ background: 'var(--color-accent)', color: 'white' }}
-          >
-            {badge}
-          </span>
-        )}
+        {badge && <span style={badgeStyle}>{badge}</span>}
       </div>
-      <ul className="mb-4 space-y-1">
+
+      <ul style={{ listStyle: 'none', margin: '0 0 4px', padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
         {files.map((file, idx) => (
-          <li
-            key={`${file.name}-${idx}`}
-            className="flex items-center justify-between gap-3 text-sm"
-          >
-            <span className="truncate">{file.name}</span>
-            <span
-              className="shrink-0 text-xs"
-              style={{ color: 'var(--color-muted)' }}
-            >
-              {formatBytes(file.size)}
-            </span>
+          <li key={`${file.name}-${idx}`} style={fileLi}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
+            <span style={{ flexShrink: 0, fontSize: 12, color: 'var(--muted)' }}>{formatBytes(file.size)}</span>
           </li>
         ))}
       </ul>
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={disabled}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          style={{ background: 'var(--color-accent)' }}
-        >
-          {Verb} {noun}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <button type="button" className="nudge" onClick={onConfirm} disabled={disabled} style={confirmBtn(disabled)}>
+          <span>{Verb} {noun}</span>
+          <span className="nudge-arrow">&#8594;</span>
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg border px-4 py-2 text-sm font-medium transition hover:opacity-80"
-          style={{ borderColor: 'var(--color-border)' }}
-        >
-          Cancel
-        </button>
-        {hint && (
-          <p
-            className="ml-1 text-xs"
-            style={{ color: 'var(--color-muted)' }}
-          >
-            {hint}
-          </p>
-        )}
+        <button type="button" onClick={onCancel} style={cancelBtn}>Cancel</button>
+        {hint && <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>{hint}</span>}
       </div>
     </section>
   );
 }
+
+const panel: CSSProperties = {
+  borderRadius: 16,
+  border: '1px solid rgba(249,115,22,0.4)',
+  background: 'var(--accent-wash)',
+  padding: 20,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 14,
+};
+const headRow: CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: 8,
+};
+const badgeStyle: CSSProperties = {
+  background: 'var(--accent)',
+  color: '#fff',
+  borderRadius: 999,
+  padding: '3px 10px',
+  fontSize: 12,
+  fontWeight: 600,
+};
+const fileLi: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+  fontSize: 13.5,
+  color: 'var(--ink-soft)',
+};
+function confirmBtn(disabled?: boolean): CSSProperties {
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    background: 'var(--accent)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 12,
+    padding: '11px 18px',
+    fontSize: 14.5,
+    fontWeight: 600,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.6 : 1,
+    boxShadow: '0 2px 10px rgba(249,115,22,0.28)',
+    fontFamily: 'inherit',
+  };
+}
+const cancelBtn: CSSProperties = {
+  background: 'var(--card)',
+  border: '1px solid var(--hair-2)',
+  borderRadius: 12,
+  padding: '11px 18px',
+  fontSize: 14.5,
+  fontWeight: 600,
+  color: 'var(--ink)',
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+};

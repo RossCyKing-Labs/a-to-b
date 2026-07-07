@@ -1,53 +1,28 @@
 ---
-import BaseLayout from '~/layouts/BaseLayout.astro';
+import ToolLayout from '~/layouts/ToolLayout.astro';
 import MergePdfConverter from '~/components/MergePdfConverter';
-import Faq from '~/components/Faq.astro';
+
+const howSteps = [
+  { n: '01', title: 'Add your PDFs', body: 'They load into this page. Nothing is uploaded to a server.' },
+  { n: '02', title: 'Order & merge locally', body: 'The work runs in your browser, on your CPU, in memory.' },
+  { n: '03', title: 'Download the result', body: 'Save the combined PDF back to your machine.' },
+];
+const faqItems = [
+  { q: 'Can I reorder the files first?', a: 'Yes — arrange them into the order you want before merging.' },
+  { q: 'Is there a limit on how many?', a: 'Only your device’s memory. There’s no server cap.' },
+  { q: 'Do the files get uploaded?', a: 'No. Merging happens in your browser — nothing leaves your device.' },
+];
 ---
 
-<BaseLayout
-  title="Merge PDF — free, in your browser · a → b"
-  description="Merge multiple PDFs into one, free, entirely in your browser. Files never get uploaded. No accounts, no file-size limits, no ads."
+<ToolLayout
+  title="Merge PDF — combine PDFs in your browser · a → b"
+  description="Merge several PDFs into one, free and entirely in your browser. Reorder before merging. Files are never uploaded. No accounts, no limits, no ads."
+  h1="Merge PDFs"
+  desc="Combine several PDFs into one, in the order you choose."
+  howSteps={howSteps}
+  faqItems={faqItems}
 >
-  <header class="mb-8">
-    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Merge PDF</h1>
-    <p class="mt-2 text-lg" style="color: var(--color-muted)">
-      Combine multiple PDFs into one — entirely in your browser.
-    </p>
-  </header>
-
-  <MergePdfConverter client:load />
-
-  <aside
-    class="mt-12 rounded-xl border p-6"
-    style="border-color: var(--color-border); background: var(--color-accent-soft)"
-  >
-    <h2
-      class="mb-2 text-xs font-semibold tracking-wider uppercase"
-      style="color: var(--color-accent)"
-    >
-      How this works
-    </h2>
-    <p class="text-sm leading-relaxed">
-      Each PDF is read locally and pages copied into a single new PDF via
-      <code>pdf-lib</code>. Pages keep their original formatting, fonts, and selectable text —
-      no rasterization. Your files never touch a server.
-    </p>
-  </aside>
-
-  <Faq
-    items={[
-      {
-        q: 'How many PDFs can I merge?',
-        a: 'As many as you want. Drag the files to reorder them before merging — there’s no file count or size limit.',
-      },
-      {
-        q: 'Are my PDFs uploaded to a server?',
-        a: 'No. Merging happens entirely in your browser — your files never leave your device.',
-      },
-      {
-        q: 'Does merging reduce quality?',
-        a: 'No. Pages are copied exactly as they are, keeping original formatting, fonts, and selectable text.',
-      },
-    ]}
-  />
-</BaseLayout>
+  <div style="margin: 22px 0 8px;">
+    <MergePdfConverter client:load />
+  </div>
+</ToolLayout>
