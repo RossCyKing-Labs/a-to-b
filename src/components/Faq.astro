@@ -1,14 +1,14 @@
 ---
 /**
- * Reusable FAQ block for tool pages.
+ * Reusable FAQ accordion.
  *
- * Beyond answering real user questions, the FAQ content gives each page
- * substantive, keyword-relevant text — which helps the page rank for
- * long-tail searches ("compress pdf without uploading", "is X private")
- * that the short hero copy alone can't cover.
+ * Beyond answering real questions, the FAQ gives each page substantive,
+ * keyword-relevant text that helps it rank for long-tail searches the short
+ * hero copy can't cover. Answers may contain simple trusted inline HTML
+ * (links, <strong>) and are rendered with set:html — never pass user content.
  *
- * Answers may contain simple trusted inline HTML (links, <strong>), so
- * they're rendered with set:html. Never pass user-supplied content here.
+ * One item open at a time; the first is open by default. The answer height
+ * animates via CSS grid-rows (0fr ↔ 1fr) so there's nothing to measure.
  */
 interface FaqItem {
   q: string;
@@ -22,20 +22,118 @@ interface Props {
 const { items } = Astro.props;
 ---
 
-<section class="mt-12">
-  <h2 class="mb-4 text-xl font-bold tracking-tight">Frequently asked questions</h2>
-  <div class="space-y-5">
+<section class="faq">
+  <div class="faq-eyebrow">Frequently asked questions</div>
+  <div class="faq-list" data-faq>
     {
-      items.map((item) => (
-        <div>
-          <h3 class="font-semibold">{item.q}</h3>
-          <p
-            class="mt-1 text-sm leading-relaxed"
-            style="color: var(--color-muted)"
-            set:html={item.a}
-          />
+      items.map((item, i) => (
+        <div class:list={['faq-item', { open: i === 0 }]}>
+          <button type="button" class="faq-q" aria-expanded={i === 0 ? 'true' : 'false'}>
+            <span>{item.q}</span>
+            <span class="faq-chev" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </span>
+          </button>
+          <div class="faq-a-wrap">
+            <div class="faq-a-inner">
+              <p class="faq-a" set:html={item.a} />
+            </div>
+          </div>
         </div>
       ))
     }
   </div>
 </section>
+
+<style>
+  .faq {
+    margin-top: 52px;
+  }
+  .faq-eyebrow {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .faq-list {
+    border-top: 1px solid var(--hair);
+  }
+  .faq-item {
+    border-bottom: 1px solid var(--hair);
+  }
+  .faq-q {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 2px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    color: var(--ink);
+  }
+  .faq-q > span:first-child {
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .faq-chev {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--muted);
+    transition: transform 240ms var(--ease-out-quad);
+  }
+  .faq-item.open .faq-chev {
+    transform: rotate(180deg);
+  }
+  .faq-a-wrap {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 260ms var(--ease-out-quad);
+  }
+  .faq-item.open .faq-a-wrap {
+    grid-template-rows: 1fr;
+  }
+  .faq-a-inner {
+    overflow: hidden;
+  }
+  .faq-a {
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    padding: 0 2px 18px;
+    max-width: 62ch;
+    margin: 0;
+  }
+  .faq-a :global(a) {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+</style>
+
+<script>
+  const list = document.querySelector('[data-faq]');
+  if (list) {
+    const items = Array.from(list.querySelectorAll('.faq-item'));
+    items.forEach((item) => {
+      const btn = item.querySelector('.faq-q');
+      btn?.addEventListener('click', () => {
+        const wasOpen = item.classList.contains('open');
+        items.forEach((it) => {
+          it.classList.remove('open');
+          it.querySelector('.faq-q')?.setAttribute('aria-expanded', 'false');
+        });
+        if (!wasOpen) {
+          item.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+  }
+</script>

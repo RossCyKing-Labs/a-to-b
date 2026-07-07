@@ -297,6 +297,16 @@ button:focus-visible,
   border-radius: 6px;
 }
 
+/* An arrow that nudges right when its parent (.nudge) is hovered. Reusable
+   across CTAs and links site-wide. */
+.nudge-arrow {
+  display: inline-block;
+  transition: transform 160ms var(--ease-out-quad);
+}
+.nudge:hover .nudge-arrow {
+  transform: translateX(4px);
+}
+
 /* Respect users who prefer reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,
