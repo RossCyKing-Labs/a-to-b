@@ -94,10 +94,15 @@ interface Candidate {
   qpdfHelped: boolean;
 }
 
-/** Encode a rendered page set at one quality and assemble the output PDF. */
+/**
+ * Encode a rendered page set at one quality and assemble the output PDF.
+ * `onPageEncoded` fires after each page's JPEG encode (1-based `done`), so
+ * callers can surface progress through this otherwise-silent stretch.
+ */
 async function assembleAtQuality(
   pages: RenderedPage[],
   quality: number,
+  onPageEncoded?: (done: number, total: number) => void,
 ): Promise<Uint8Array> {
   const encoded: EncodedPage[] = [];
   for (const p of pages) {
@@ -108,6 +113,7 @@ async function assembleAtQuality(
       pointHeight: p.pointHeight,
       textRuns: p.textRuns,
     });
+    onPageEncoded?.(encoded.length, pages.length);
   }
   return assembleRasterizedPdf(encoded);
 }
@@ -181,6 +187,8 @@ export async function compressPdfToTarget(
     };
   }
 
+  onProgress?.({ message: 'Reading document…', stage: 'read' });
+
   let attempts = 0;
   let smallest: Candidate | null = null;
   const consider = (c: Candidate) => {
@@ -188,8 +196,11 @@ export async function compressPdfToTarget(
   };
 
   // 2. Non-flatten first — keep text/vectors sharp, only recompress images.
-  onProgress?.({ message: 'Recompressing images (keeping text sharp)…' });
   for (const level of NON_FLATTEN_LEVELS) {
+    onProgress?.({
+      message: 'Recompressing images (keeping text sharp)…',
+      stage: 'recompress',
+    });
     const r = await compressPdf(file, level);
     attempts++;
     const cand: Candidate = {
@@ -201,6 +212,15 @@ export async function compressPdfToTarget(
       qpdfHelped: r.qpdfPassRan && r.qpdfHelped,
     };
     consider(cand);
+    onProgress?.({
+      message: 'Checking size…',
+      stage: 'recompress',
+      attempt: {
+        label: level === 'low' ? 'Light' : 'Balanced',
+        bytes: cand.size,
+        over: cand.size > targetBytes,
+      },
+    });
     // A non-flatten pass that fits is the best outcome: sharp text AND under
     // target. Take it immediately (least aggressive that fits wins).
     if (r.smallerThanOriginal && cand.size <= targetBytes) {
@@ -216,10 +236,16 @@ export async function compressPdfToTarget(
     pagesRasterized = pages.length;
     if (estimatePixelBytes(pages) > PIXEL_BUDGET_BYTES) continue;
 
-    onProgress?.({ message: 'Choosing the sharpest quality that fits…' });
+    onProgress?.({ message: 'Choosing the sharpest quality that fits…', stage: 'encode' });
     let fit: Candidate | null = null;
     for (const quality of QUALITY_LADDER) {
-      const bytes = await assembleAtQuality(pages, quality);
+      const bytes = await assembleAtQuality(pages, quality, (done, total) => {
+        onProgress?.({
+          message: `Encoding page ${done} of ${total} · quality ${quality}`,
+          stage: 'encode',
+          fraction: done / total,
+        });
+      });
       attempts++;
       const cand: Candidate = {
         blob: pdfBlob(bytes),
@@ -233,6 +259,15 @@ export async function compressPdfToTarget(
         qpdfHelped: false,
       };
       consider(cand);
+      onProgress?.({
+        message: 'Checking size…',
+        stage: 'encode',
+        attempt: {
+          label: `${dpi} dpi · q${quality}`,
+          bytes: bytes.byteLength,
+          over: bytes.byteLength > targetBytes,
+        },
+      });
       if (bytes.byteLength <= targetBytes) {
         fit = cand;
         break;
@@ -240,7 +275,7 @@ export async function compressPdfToTarget(
     }
 
     if (fit) {
-      onProgress?.({ message: 'Finishing…' });
+      onProgress?.({ message: 'Finishing (structural pass)…', stage: 'finalize' });
       // qpdf once on the winner — can only shrink it further.
       const { bytes, helped } = await applyQpdf(fit.bytes!);
       const finalBytes = bytes.byteLength >= originalSize ? new Uint8Array(buf) : bytes;
@@ -277,6 +312,7 @@ export async function compressPdfToTarget(
   }
 
   if (best.strategy === 'rasterize' && best.bytes) {
+    onProgress?.({ message: 'Finishing (structural pass)…', stage: 'finalize' });
     const { bytes, helped } = await applyQpdf(best.bytes);
     const finalBytes = bytes.byteLength >= originalSize ? new Uint8Array(buf) : bytes;
     return toResult(

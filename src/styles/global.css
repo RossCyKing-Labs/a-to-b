@@ -278,6 +278,16 @@
   60% { transform: scale(1.02); }
   100% { transform: scale(1); }
 }
+/* Indeterminate progress: a bar segment sweeping across its track. */
+@keyframes shimmer {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(390%); }
+}
+/* Gentle idle pulse so long-running states never look frozen. */
+@keyframes idlepulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
 
 html,
 body {
