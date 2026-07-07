@@ -1,13 +1,10 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import DownloadButton from './DownloadButton';
 
 /**
- * One row in a results list: a truncating filename, a muted meta line
- * (size, status, or an inline error), and a right-hand action.
- *
- * By default the action is a Download button when `href` + `filename` are
- * supplied; pass `action` to override (or omit both for a status-only row,
- * e.g. a file that is still converting or errored).
+ * One row in a results list: a truncating title, a muted meta line (size,
+ * status, or an inline error), and a right-hand action (a Download button by
+ * default when href + filename are given).
  */
 export default function DownloadRow({
   name,
@@ -17,9 +14,7 @@ export default function DownloadRow({
   filename,
   action,
 }: {
-  /** Filename shown as the (truncating) title line. Ignored when `header` is set. */
   name?: string;
-  /** Custom title-line node (e.g. filename + a badge). Overrides `name`. */
   header?: ReactNode;
   meta?: ReactNode;
   href?: string;
@@ -30,19 +25,36 @@ export default function DownloadRow({
     action ?? (href && filename ? <DownloadButton href={href} filename={filename} /> : null);
 
   return (
-    <li
-      className="flex items-center justify-between gap-4 rounded-lg border p-3"
-      style={{ borderColor: 'var(--color-border)' }}
-    >
-      <div className="min-w-0 flex-1">
-        {header ?? <div className="truncate text-sm font-medium">{name}</div>}
-        {meta !== undefined && meta !== null && (
-          <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
-            {meta}
-          </div>
-        )}
+    <li style={row}>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        {header ?? <div style={title}>{name}</div>}
+        {meta !== undefined && meta !== null && <div style={metaStyle}>{meta}</div>}
       </div>
       {rightSlot}
     </li>
   );
 }
+
+const row: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 16,
+  background: 'var(--card)',
+  border: '1px solid var(--hair)',
+  borderRadius: 12,
+  padding: '12px 14px',
+};
+const title: CSSProperties = {
+  fontSize: 14.5,
+  fontWeight: 600,
+  color: 'var(--ink)',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+};
+const metaStyle: CSSProperties = {
+  fontSize: 12.5,
+  color: 'var(--muted)',
+  marginTop: 2,
+};

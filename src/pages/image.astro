@@ -1,53 +1,28 @@
 ---
-import BaseLayout from '~/layouts/BaseLayout.astro';
+import ToolLayout from '~/layouts/ToolLayout.astro';
 import ImageConverter from '~/components/ImageConverter';
-import Faq from '~/components/Faq.astro';
+
+const howSteps = [
+  { n: '01', title: 'Drop your images', body: 'They load into this page. Nothing is uploaded to a server.' },
+  { n: '02', title: 'Convert locally', body: 'Pixels are re-encoded by your browser, on your CPU.' },
+  { n: '03', title: 'Download the result', body: 'Save it back to your machine. We never see the file.' },
+];
+const faqItems = [
+  { q: 'Which formats are supported?', a: 'Convert freely between JPG, PNG and WebP. Everything is re-encoded locally in your browser.' },
+  { q: 'Does converting lose quality?', a: 'Only if you target a lossy format like JPG. PNG and WebP (lossless) preserve every pixel.' },
+  { q: 'Are my photos uploaded?', a: 'No — pixels are read into memory and re-encoded on your CPU. Nothing is sent anywhere.' },
+];
 ---
 
-<BaseLayout
+<ToolLayout
   title="Image converter — PNG, JPEG & WebP · a → b"
   description="Free image converter for PNG, JPEG, and WebP. Runs entirely in your browser — your files are never uploaded. No accounts, no limits, no ads."
+  h1="Convert an image"
+  desc="Change an image between JPG, PNG and WebP — nothing leaves your browser."
+  howSteps={howSteps}
+  faqItems={faqItems}
 >
-  <header class="mb-8">
-    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Image converter</h1>
-    <p class="mt-2 text-lg" style="color: var(--color-muted)">
-      Convert between PNG, JPEG, and WebP — entirely in your browser.
-    </p>
-  </header>
-
-  <ImageConverter client:load />
-
-  <aside
-    class="mt-12 rounded-xl border p-6"
-    style="border-color: var(--color-border); background: var(--color-accent-soft)"
-  >
-    <h2
-      class="mb-2 text-xs font-semibold tracking-wider uppercase"
-      style="color: var(--color-accent)"
-    >
-      How this works
-    </h2>
-    <p class="text-sm leading-relaxed">
-      Your files are decoded and re-encoded by your browser using the Canvas API. They never touch
-      a server. You can verify in DevTools — the Network tab will show zero outbound requests
-      during conversion.
-    </p>
-  </aside>
-
-  <Faq
-    items={[
-      {
-        q: 'Which image formats can I convert?',
-        a: 'PNG, JPEG, and WebP, in any direction. Drop several files at once to convert a whole batch.',
-      },
-      {
-        q: 'Are my images uploaded anywhere?',
-        a: 'No. Conversion runs in your browser using the Canvas API — your images never leave your device.',
-      },
-      {
-        q: 'Is there a limit on file size or number of images?',
-        a: 'No limits. Convert as many images, as large as you like — speed depends only on your own device.',
-      },
-    ]}
-  />
-</BaseLayout>
+  <div style="margin: 22px 0 8px;">
+    <ImageConverter client:load />
+  </div>
+</ToolLayout>

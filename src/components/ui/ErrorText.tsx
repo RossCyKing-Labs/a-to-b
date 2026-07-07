@@ -1,13 +1,8 @@
 import type { ReactNode } from 'react';
 
 /**
- * Danger-coloured text. Centralises the error colour (previously the literal
- * `#dc2626` hardcoded in nine components) onto the `--color-danger` design
- * token.
- *
- * Two shapes, matching how the converters surface errors:
- *  - block  (default): a standalone `<p>` beneath the drop zone.
- *  - inline (`inline`): a `<span>` embedded in a result row's meta line.
+ * Danger-coloured text on the --danger token. Block (`<p>`) by default, or
+ * inline (`<span>`) for embedding in a result row's meta line.
  */
 export default function ErrorText({
   children,
@@ -17,11 +12,7 @@ export default function ErrorText({
   inline?: boolean;
 }) {
   if (inline) {
-    return <span style={{ color: 'var(--color-danger)' }}>{children}</span>;
+    return <span style={{ color: 'var(--danger)' }}>{children}</span>;
   }
-  return (
-    <p className="text-sm" style={{ color: 'var(--color-danger)' }}>
-      {children}
-    </p>
-  );
+  return <p style={{ fontSize: 13.5, color: 'var(--danger)' }}>{children}</p>;
 }

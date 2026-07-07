@@ -7,7 +7,7 @@ describe('FileDrop', () => {
   it('renders the default placeholder when no children are passed', () => {
     render(<FileDrop onFiles={() => {}} />);
     expect(screen.getByText(/drop files here/i)).toBeInTheDocument();
-    expect(screen.getByText(/click to select/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /choose files/i })).toBeInTheDocument();
   });
 
   it('renders custom children if provided', () => {

@@ -1,52 +1,28 @@
 ---
-import BaseLayout from '~/layouts/BaseLayout.astro';
+import ToolLayout from '~/layouts/ToolLayout.astro';
 import PdfToJpgConverter from '~/components/PdfToJpgConverter';
-import Faq from '~/components/Faq.astro';
+
+const howSteps = [
+  { n: '01', title: 'Drop your PDF', body: 'It loads into this page. Nothing is uploaded to a server.' },
+  { n: '02', title: 'Render locally', body: 'Pages are rendered to images by your browser, on your CPU.' },
+  { n: '03', title: 'Download the images', body: 'Save each page image back to your machine.' },
+];
+const faqItems = [
+  { q: 'What resolution are the images?', a: 'Pages are rendered at a crisp, screen-friendly resolution — you can tune the quality.' },
+  { q: 'How are multiple pages delivered?', a: 'One JPG per page, each downloadable on its own, rendered locally in your browser.' },
+  { q: 'Is my PDF uploaded?', a: 'No — rendering happens on your device with zero network requests.' },
+];
 ---
 
-<BaseLayout
-  title="PDF to JPG — PDF pages to images · a → b"
-  description="Convert each page of a PDF into a JPG image, free, entirely in your browser. Your file is never uploaded. No accounts, no limits, no ads."
+<ToolLayout
+  title="PDF to JPG — pages to images in your browser · a → b"
+  description="Convert PDF pages to JPG images, free and entirely in your browser. Files are never uploaded. No accounts, no limits, no ads."
+  h1="PDF to JPG"
+  desc="Save every page of a PDF as a crisp image."
+  howSteps={howSteps}
+  faqItems={faqItems}
 >
-  <header class="mb-8">
-    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">PDF → JPG</h1>
-    <p class="mt-2 text-lg" style="color: var(--color-muted)">
-      Render every page of a PDF as a JPG image — entirely in your browser.
-    </p>
-  </header>
-
-  <PdfToJpgConverter client:load />
-
-  <aside
-    class="mt-12 rounded-xl border p-6"
-    style="border-color: var(--color-border); background: var(--color-accent-soft)"
-  >
-    <h2
-      class="mb-2 text-xs font-semibold tracking-wider uppercase"
-      style="color: var(--color-accent)"
-    >
-      How this works
-    </h2>
-    <p class="text-sm leading-relaxed">
-      Each page is rendered to a canvas via <code>pdf.js</code>, then exported as a JPG with your
-      chosen quality. Useful for sharing single pages as images. Your file never leaves your device.
-    </p>
-  </aside>
-
-  <Faq
-    items={[
-      {
-        q: 'What do I get back?',
-        a: 'One JPG image per page of your PDF, each downloadable separately.',
-      },
-      {
-        q: 'Can I control the image quality?',
-        a: 'Yes — a quality slider lets you trade file size against sharpness. 85% is a good default.',
-      },
-      {
-        q: 'Are my files uploaded?',
-        a: 'No. Pages are rendered to images in your browser; your PDF never leaves your device.',
-      },
-    ]}
-  />
-</BaseLayout>
+  <div style="margin: 22px 0 8px;">
+    <PdfToJpgConverter client:load />
+  </div>
+</ToolLayout>
