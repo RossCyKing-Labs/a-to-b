@@ -1,65 +1,36 @@
 ---
-import BaseLayout from '~/layouts/BaseLayout.astro';
+import ToolLayout from '~/layouts/ToolLayout.astro';
 import CompressPdfConverter from '~/components/CompressPdfConverter';
-import Faq from '~/components/Faq.astro';
+
+const howSteps = [
+  { n: '01', title: 'Drop your file', body: 'It loads into this page. Nothing is uploaded to a server.' },
+  { n: '02', title: 'Compress locally', body: 'The work runs in your browser, on your CPU, in memory.' },
+  { n: '03', title: 'Download the result', body: 'Save it back to your machine. We never see the file.' },
+];
+
+const faqItems = [
+  {
+    q: 'Will compressing blur my text?',
+    a: 'No. Text stays sharp and selectable — only images are re-encoded to hit your target size. (The Strong level flattens pages to images but keeps an invisible, still-selectable text layer.)',
+  },
+  {
+    q: 'Can I choose the exact final size?',
+    a: 'Pick a size target (like “under 2 MB”) or a quality level. In size mode we aim just under your limit.',
+  },
+  {
+    q: 'Are my PDFs uploaded to compress them?',
+    a: 'Never. Compression runs entirely on your device — verify it in DevTools → Network.',
+  },
+];
 ---
 
-<BaseLayout
+<ToolLayout
   title="Compress PDF — shrink file size in-browser · a → b"
   description="Compress and shrink PDF file size, free, entirely in your browser. Text stays selectable. Files are never uploaded. No accounts, no limits, no ads."
+  h1="Compress PDF"
+  desc="Make your PDF smaller to fit an upload limit — processed right here, on your device."
+  howSteps={howSteps}
+  faqItems={faqItems}
 >
-  <header class="mb-8">
-    <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Compress PDF</h1>
-    <p class="mt-2 text-lg" style="color: var(--color-muted)">
-      Shrink PDF file size — entirely in your browser. Text stays selectable.
-    </p>
-  </header>
-
   <CompressPdfConverter client:load />
-
-  <aside
-    class="mt-12 rounded-xl border p-6"
-    style="border-color: var(--color-border); background: var(--color-accent-soft)"
-  >
-    <h2
-      class="mb-2 text-xs font-semibold tracking-wider uppercase"
-      style="color: var(--color-accent)"
-    >
-      How this works
-    </h2>
-    <p class="text-sm leading-relaxed">
-      <strong>Light</strong> and <strong>Balanced</strong> use image recompression: embedded
-      images are downsized to match how big they actually appear on the page, re-encoded with
-      mozjpeg, then a qpdf-wasm pass repacks the PDF's structure. Text, fonts, vectors, form
-      fields, and bookmarks are all preserved.
-    </p>
-    <p class="mt-3 text-sm leading-relaxed">
-      <strong>Strong</strong> uses a different technique for much bigger savings (often 80–90%):
-      each page is rendered to a JPEG and rebuilt with an invisible text layer overlaid at the
-      original character positions. <strong>Text stays selectable and searchable</strong>, but
-      form widgets, signature fields, bookmarks, annotations, and accessibility tags are not
-      preserved. Use Light or Balanced if you need to keep those.
-    </p>
-    <p class="mt-3 text-sm leading-relaxed">
-      If we'd produce a bigger file, we hand back your original unchanged. Either way, your
-      file never leaves your device.
-    </p>
-  </aside>
-
-  <Faq
-    items={[
-      {
-        q: 'How much smaller will my PDF get?',
-        a: 'It depends on the file and the preset. Light and Balanced typically save 10–25%; Strong can reach 80–90% on image-heavy or mixed PDFs.',
-      },
-      {
-        q: 'Will the text still be selectable after compressing?',
-        a: 'Yes. On Light and Balanced everything is preserved. On Strong, pages are flattened to images but an invisible text layer keeps the text selectable and searchable.',
-      },
-      {
-        q: 'Are my files uploaded to a server?',
-        a: 'No. Compression runs entirely in your browser — your PDF never leaves your device.',
-      },
-    ]}
-  />
-</BaseLayout>
+</ToolLayout>
