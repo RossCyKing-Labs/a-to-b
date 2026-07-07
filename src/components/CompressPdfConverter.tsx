@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { isPdf, type CompressLevel } from '~/lib/pdfTools';
 import { compressToTargetSmart, compressByLevelSmart } from '~/lib/compressClient';
 import { formatBytes } from '~/lib/format';
+import type { CompressAttempt, CompressProgress, CompressStage } from '~/lib/compressProgress';
 
 /**
  * Compress PDF — the hero tool, single file at a time.
@@ -25,7 +26,15 @@ const QUALITY_LEVELS: { label: string; level: CompressLevel }[] = [
   { label: 'Balanced', level: 'medium' },
   { label: 'Strong', level: 'high' },
 ];
-const PIP_COUNT = 5;
+// Macro stages of the pipeline, in order — drives the honest stage pips.
+const STAGES: CompressStage[] = ['read', 'recompress', 'render', 'encode', 'finalize'];
+const STAGE_IDX: Record<CompressStage, number> = {
+  read: 0,
+  recompress: 1,
+  render: 2,
+  encode: 3,
+  finalize: 4,
+};
 
 const ease = (t: number) => 1 - Math.pow(1 - t, 3);
 const prefersReduced = () =>
@@ -41,7 +50,10 @@ export default function CompressPdfConverter() {
   const [sizeIdx, setSizeIdx] = useState(1); // default ≤ 2 MB
   const [levelIdx, setLevelIdx] = useState(1); // default Balanced
   const [procMsg, setProcMsg] = useState('Working…');
-  const [procStep, setProcStep] = useState(0);
+  const [procStage, setProcStage] = useState(0);
+  const [procFraction, setProcFraction] = useState<number | null>(null);
+  const [procAttempts, setProcAttempts] = useState<CompressAttempt[]>([]);
+  const [elapsed, setElapsed] = useState(0);
   const [errorText, setErrorText] = useState('');
   // done / reveal
   const [origBytes, setOrigBytes] = useState(0);
@@ -76,13 +88,25 @@ export default function CompressPdfConverter() {
     [],
   );
 
+  // Elapsed-seconds ticker while processing — a quiet liveness signal even if
+  // the engine goes briefly silent between progress events.
+  useEffect(() => {
+    if (phase !== 'processing') return;
+    setElapsed(0);
+    const t0 = performance.now();
+    const iv = setInterval(() => setElapsed(Math.floor((performance.now() - t0) / 1000)), 1000);
+    return () => clearInterval(iv);
+  }, [phase]);
+
   const reset = () => {
     clearTimers();
     revokeUrl();
     setPhase('idle');
     setFile(null);
     setDrag(false);
-    setProcStep(0);
+    setProcStage(0);
+    setProcFraction(null);
+    setProcAttempts([]);
     setShowDelta(false);
     setShowDownload(false);
   };
@@ -91,7 +115,9 @@ export default function CompressPdfConverter() {
     revokeUrl();
     setFile(f);
     setPhase('confirm');
-    setProcStep(0);
+    setProcStage(0);
+    setProcFraction(null);
+    setProcAttempts([]);
     setShowDelta(false);
     setShowDownload(false);
   };
@@ -119,13 +145,19 @@ export default function CompressPdfConverter() {
     }
 
     clearTimers();
-    setProcStep(0);
+    setProcStage(0);
+    setProcFraction(null);
+    setProcAttempts([]);
     setProcMsg('Reading document…');
     setPhase('processing');
 
-    const onProgress = (message: string) => {
-      setProcMsg(message);
-      setProcStep((s) => Math.min(s + 1, PIP_COUNT - 1));
+    // Map real engine progress onto the readout: message, honest stage pips,
+    // determinate fraction when the engine knows it, and the attempt log.
+    const onProgress = (p: CompressProgress) => {
+      setProcMsg(p.message);
+      setProcFraction(p.fraction ?? null);
+      if (p.stage) setProcStage(STAGE_IDX[p.stage]);
+      if (p.attempt) setProcAttempts((a) => [...a.slice(-2), p.attempt!]);
     };
 
     try {
@@ -136,15 +168,13 @@ export default function CompressPdfConverter() {
       let met = true;
 
       if (mode === 'size') {
-        const r = await compressToTargetSmart(file, targetBytes, (p) => onProgress(p.message));
+        const r = await compressToTargetSmart(file, targetBytes, onProgress);
         oBytes = r.originalSize;
         fBytes = r.finalSize;
         blob = r.blob;
         met = r.metTarget;
       } else {
-        const r = await compressByLevelSmart(file, QUALITY_LEVELS[levelIdx].level, (p) =>
-          onProgress(p.message),
-        );
+        const r = await compressByLevelSmart(file, QUALITY_LEVELS[levelIdx].level, onProgress);
         oBytes = r.originalSize;
         fBytes = r.finalSize;
         blob = r.blob;
@@ -309,16 +339,49 @@ export default function CompressPdfConverter() {
 
       {phase === 'processing' && (
         <div style={{ animation: 'rise 240ms var(--ease-out-quad) both', padding: '10px 2px 6px' }}>
-          <div style={{ ...eyebrow, marginBottom: 16 }}>Working locally</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 16, color: 'var(--ink)', minHeight: 26 }}>
-            <span key={`hb${procStep}`} style={{ display: 'inline-block', color: 'var(--accent)', fontWeight: 700, fontSize: 17, animation: 'tick 420ms var(--ease-out-quad)' }}>&#8594;</span>
-            <span key={`m${procStep}`} style={{ display: 'inline-block', fontWeight: 500, animation: 'fadeup 260ms var(--ease-out-quad) both' }}>{procMsg}</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={eyebrow}>Working locally</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--faint)', fontVariantNumeric: 'tabular-nums' }}>
+              {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, '0')}
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 20 }}>
-            {Array.from({ length: PIP_COUNT }).map((_, i) => (
-              <div key={i} style={pip(i, procStep)} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 16, color: 'var(--ink)', minHeight: 26 }}>
+            {/* Heartbeat: re-ticks on stage change, pulses gently in between so it never looks frozen. */}
+            <span key={`hb${procStage}`} style={{ display: 'inline-block', color: 'var(--accent)', fontWeight: 700, fontSize: 17, animation: 'tick 420ms var(--ease-out-quad), idlepulse 1.6s ease-in-out 1s infinite' }}>&#8594;</span>
+            <span key={`m${procStage}`} style={{ display: 'inline-block', fontWeight: 500, animation: 'fadeup 260ms var(--ease-out-quad) both' }}>{procMsg}</span>
+          </div>
+
+          {/* Progress bar: determinate (real fraction) when the engine knows it, sweeping when it doesn't. */}
+          <div style={barTrack} role="progressbar" aria-label="Compression progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={procFraction !== null ? Math.round(procFraction * 100) : undefined}>
+            {procFraction !== null ? (
+              <div style={{ ...barFill, transform: `scaleX(${Math.max(0.02, Math.min(1, procFraction))})` }} />
+            ) : (
+              <div style={{ ...barFill, width: '28%', animation: 'shimmer 1.3s var(--ease-in-out) infinite' }} />
+            )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 16 }}>
+            {STAGES.map((s, i) => (
+              <div key={s} style={pip(i, procStage)} />
             ))}
           </div>
+
+          {/* The attempt log: the search converging on the target, in real sizes. */}
+          {procAttempts.length > 0 && (
+            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 5 }} aria-live="off">
+              {procAttempts.map((a, i) => {
+                const latest = i === procAttempts.length - 1;
+                return (
+                  <div key={`${a.label}-${i}`} style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontVariantNumeric: 'tabular-nums', color: latest ? 'var(--ink-soft)' : 'var(--faint)', animation: latest ? 'fadeup 220ms var(--ease-out-quad) both' : 'none' }}>
+                    {a.label} &#8594; {formatBytes(a.bytes)}{' '}
+                    <span style={{ marginLeft: 8, color: a.over ? 'var(--faint)' : 'var(--accent)', fontWeight: a.over ? 400 : 700 }}>{a.over ? '· over target' : '· fits'}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <div style={{ fontSize: 12.5, color: 'var(--faint)', marginTop: 18 }}>No data leaves your device — check the Network tab.</div>
         </div>
       )}
@@ -469,6 +532,22 @@ const segTrack: CSSProperties = {
   borderRadius: 12,
   padding: 4,
   marginBottom: 14,
+};
+const barTrack: CSSProperties = {
+  position: 'relative',
+  height: 3,
+  borderRadius: 999,
+  background: 'var(--track)',
+  overflow: 'hidden',
+  marginTop: 14,
+};
+const barFill: CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  borderRadius: 999,
+  background: 'var(--accent)',
+  transformOrigin: 'left',
+  transition: 'transform 200ms var(--ease-out-quad)',
 };
 const dangerPanel: CSSProperties = {
   display: 'flex',

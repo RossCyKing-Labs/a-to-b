@@ -7,6 +7,9 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   // Public origin used for canonical URLs, OG tags, and the sitemap.
   site: 'https://fromatob.app',
+  // Dev server: honor an externally assigned port (e.g. the preview harness's
+  // PORT env var) so parallel sessions don't fight over 4321.
+  server: { port: Number(process.env.PORT) || 4321 },
   integrations: [
     react(),
     // Exclude the retired Word tool routes: they are noindex redirects to `/`

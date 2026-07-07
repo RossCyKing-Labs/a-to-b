@@ -22,8 +22,10 @@ import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import type { OnCompressProgress } from './compressProgress';
 
-// One-time worker setup for pdf.js — same pattern as src/lib/pdfToDocx.ts
-if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+// One-time pdf.js worker setup. Unconditional (not window-guarded): this
+// module also runs INSIDE the compress Web Worker, where `window` is
+// undefined but pdf.js still requires workerSrc.
+if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 }
 
@@ -415,7 +417,7 @@ export async function compressPdf(
     return compressViaRasterize(file, buf, originalSize, onProgress);
   }
 
-  onProgress?.({ message: 'Recompressing images…' });
+  onProgress?.({ message: 'Recompressing images…', stage: 'recompress' });
   const preset = COMPRESS_PRESETS[level];
   const doc = await PDFDocument.load(buf, { ignoreEncryption: false });
 
@@ -437,6 +439,19 @@ export async function compressPdf(
   let imagesRecompressed = 0;
   const indirects = doc.context.enumerateIndirectObjects();
 
+  // Cheap dict-inspection pre-pass (no decoding): count the qualifying
+  // JPEG image streams so the per-image progress below has a denominator.
+  let totalJpegImages = 0;
+  for (const [, obj] of indirects) {
+    if (!(obj instanceof PDFRawStream)) continue;
+    const subtype = obj.dict.get(PDFName.of('Subtype'));
+    if (!subtype || subtype.toString() !== '/Image') continue;
+    const filter = obj.dict.get(PDFName.of('Filter'));
+    if (!filter || !filter.toString().includes('DCTDecode')) continue;
+    totalJpegImages++;
+  }
+  let jpegImageIndex = 0;
+
   for (const [ref, obj] of indirects) {
     if (!(obj instanceof PDFRawStream)) continue;
     const dict = obj.dict;
@@ -447,6 +462,15 @@ export async function compressPdf(
     const filter = dict.get(PDFName.of('Filter'));
     const filterStr = filter ? filter.toString() : '';
     if (!filterStr.includes('DCTDecode')) continue;
+
+    if (totalJpegImages > 0) {
+      jpegImageIndex++;
+      onProgress?.({
+        message: `Recompressing image ${jpegImageIndex} of ${totalJpegImages}…`,
+        stage: 'recompress',
+        fraction: jpegImageIndex / totalJpegImages,
+      });
+    }
 
     const jpegBytes = obj.contents;
     if (!jpegBytes || jpegBytes.length === 0) continue;
@@ -529,7 +553,7 @@ export async function compressPdf(
   const afterPdfLibSize = pdfLibBytes.byteLength;
 
   // ── Stage 3: qpdf structural pass (off-thread) ──
-  onProgress?.({ message: 'Finishing…' });
+  onProgress?.({ message: 'Finishing…', stage: 'finalize' });
   let bestBytes: Uint8Array = pdfLibBytes;
   let qpdfPassRan = false;
   let qpdfHelped = false;
@@ -608,7 +632,7 @@ async function compressViaRasterize(
   onProgress?: OnCompressProgress,
 ): Promise<CompressResult> {
   const { rasterizePdf } = await import('./rasterizePipeline');
-  onProgress?.({ message: 'Flattening pages…' });
+  onProgress?.({ message: 'Flattening pages…', stage: 'render' });
   // Tuned for "iLovePDF Recommended" parity: 144 DPI is retina-class
   // sharpness, q55 is the visual-equivalence sweet spot.
   const rasterized = await rasterizePdf(file, { dpi: 144, jpegQuality: 55 });

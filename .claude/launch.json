@@ -5,7 +5,8 @@
       "name": "astro-dev",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev"],
-      "port": 4321
+      "port": 4321,
+      "autoPort": true
     }
   ]
 }
