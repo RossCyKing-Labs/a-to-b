@@ -6,54 +6,101 @@ import BaseLayout from '~/layouts/BaseLayout.astro';
   title="About a → b — a private, browser-based file converter"
   description="a → b is a free file converter built around one promise: your files never leave your browser. Here's why it exists, how it's free, and how it's fast."
 >
-  <h1 class="mb-6 text-3xl font-bold">About</h1>
+  <div class="wrap">
+    <div class="eyebrow">About</div>
+    <h1>A file tool that keeps to itself.</h1>
 
-  <div class="space-y-6 text-base leading-relaxed">
     <p>
-      a → b is a free file converter that does one thing: take a file in format <em>a</em>,
-      give you back a file in format <em>b</em>, in your browser, without sending your data
-      anywhere.
+      a → b started from a small frustration: every “free online converter” wants to upload your
+      file to a server you’ve never heard of, wrapped in ads and trackers, to do something your own
+      computer could do in a second.
+    </p>
+    <p>
+      So this one doesn’t. Every conversion runs inside your browser using WebAssembly. Your files
+      are read into memory, transformed on your own CPU, and handed back — they never touch a
+      network. You don’t have to take our word for it: open your browser’s Network tab and watch it
+      stay empty while you work.
+    </p>
+    <p>
+      No accounts. No tracking. No file-size games designed to sell you a subscription. Just a
+      small, sharp set of tools that respect your privacy by construction.
     </p>
 
-    <h2 class="mt-8 text-xl font-semibold">Why does this exist?</h2>
-    <p>
-      Most online file converters upload your files to their servers. Even when they say they
-      don't keep them, you have to take their word for it. I wanted a tool I could trust with
-      personal documents — contracts, tax forms, scanned IDs — without that leap of faith. So
-      I built one where the privacy promise is enforced by the architecture, not a policy
-      page: there is no upload endpoint on the site at all.
-    </p>
-
-    <h2 class="mt-8 text-xl font-semibold">How is this free?</h2>
-    <p>
-      It costs almost nothing to run. The site is static HTML and JavaScript hosted on
-      Cloudflare. Conversion happens on your device, so there's no server to pay for. There are
-      no ads. There's no data to sell. If you'd like to support the project, you can
-      <a
-        href="https://ko-fi.com/rosscyking"
-        target="_blank"
-        rel="noopener"
-        class="underline hover:no-underline">buy me a coffee</a
-      >. Optional, never asked twice.
-    </p>
-
-    <h2 class="mt-8 text-xl font-semibold">How is this fast?</h2>
-    <p>
-      Modern browsers can do a surprising amount. Image conversion uses the Canvas API.
-      PDF tools use <code>pdf-lib</code> and <code>pdf.js</code>. Compress PDF additionally
-      runs <code>qpdf</code> compiled to WebAssembly, plus <code>mozjpeg</code> for image
-      re-encoding, in a Web Worker so the page stays responsive on large files. The whole
-      pipeline ships as a single static site — no installs, no extensions, no accounts.
-    </p>
-
-    <h2 class="mt-8 text-xl font-semibold">Open source</h2>
-    <p>
-      The code is on
-      <a
-        href="https://github.com/rosscyking1115/a-to-b"
-        class="underline hover:no-underline"
-        rel="noopener">GitHub</a
-      >. Anyone can audit it, fork it, or open an issue. Apache-2.0 licensed.
-    </p>
+    <div class="support">
+      <div class="support-title">If it saved you a minute</div>
+      <div class="support-body">
+        a → b is free and always will be. It’s built and maintained by one person. If it’s useful, a
+        small tip keeps it caffeinated — entirely optional, never nagged.
+      </div>
+      <a class="support-cta" href="https://ko-fi.com/rosscyking" target="_blank" rel="noopener">
+        Support on Ko-fi
+      </a>
+    </div>
   </div>
 </BaseLayout>
+
+<style>
+  .wrap {
+    padding: 48px 0 8px;
+    max-width: 68ch;
+  }
+  .eyebrow {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-size: 34px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0 0 20px;
+    color: var(--ink);
+    font-weight: 600;
+  }
+  p {
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    margin: 0 0 18px;
+  }
+  .support {
+    border: 1px solid var(--hair);
+    border-radius: 14px;
+    padding: 22px;
+    background: var(--card);
+    margin-top: 10px;
+  }
+  .support-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .support-body {
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    margin-bottom: 16px;
+  }
+  .support-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 12px;
+    padding: 11px 18px;
+    font-size: 14.5px;
+    font-weight: 600;
+  }
+
+  @media (max-width: 720px) {
+    h1 {
+      font-size: 27px;
+    }
+  }
+</style>

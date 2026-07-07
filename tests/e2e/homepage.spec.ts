@@ -37,14 +37,14 @@ test.describe('homepage', () => {
 
   test('Privacy page lists the verifiable promises', async ({ page }) => {
     await page.goto('/privacy');
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Privacy');
-    await expect(page.getByText(/Your files never leave your device/)).toBeVisible();
-    await expect(page.getByText(/We don't upload your files anywhere/)).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('never leave your device');
+    await expect(page.getByText(/Open your Network tab and watch nothing happen/)).toBeVisible();
+    await expect(page.getByText(/No requests recorded/)).toBeVisible();
   });
 
   test('404 page links back to the converters', async ({ page }) => {
     await page.goto('/this-route-definitely-does-not-exist');
-    await expect(page.getByText(/that page doesn't exist/i)).toBeVisible();
-    await expect(page.getByRole('link', { name: /^Image/ })).toBeVisible();
+    await expect(page.getByText(/went nowhere/i)).toBeVisible();
+    await expect(page.getByRole('link', { name: /back to tools/i })).toBeVisible();
   });
 });
