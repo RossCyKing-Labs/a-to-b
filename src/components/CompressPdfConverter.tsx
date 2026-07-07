@@ -1,474 +1,574 @@
-import { useState } from 'react';
-import FileDrop from './FileDrop';
-import PendingFilesConfirmation from './PendingFilesConfirmation';
-import ResultList from './ui/ResultList';
-import DownloadRow from './ui/DownloadRow';
-import ErrorText from './ui/ErrorText';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { isPdf, type CompressLevel } from '~/lib/pdfTools';
 import { compressToTargetSmart, compressByLevelSmart } from '~/lib/compressClient';
-import { formatBytes, sizeDelta } from '~/lib/format';
-import { useObjectUrls } from '~/lib/useObjectUrls';
-
-type Mode = 'target' | 'level';
-type Status = 'pending' | 'compressing' | 'done' | 'error';
-
-interface Item {
-  id: string;
-  originalName: string;
-  originalSize: number;
-  /** Short label of the setting used, shown as a pill (e.g. "≤ 2 MB", "Balanced"). */
-  badge: string;
-  status: Status;
-  /** Live progress message while status is 'compressing'. */
-  progress?: string;
-  newName?: string;
-  newSize?: number;
-  url?: string;
-  note?: string;
-  /** Target mode only: did the output land under the requested size? */
-  metTarget?: boolean;
-  error?: string;
-}
-
-const LEVELS: { id: CompressLevel; label: string; desc: string }[] = [
-  { id: 'low', label: 'Light', desc: 'Best quality, modest reduction' },
-  { id: 'medium', label: 'Balanced', desc: 'Recommended for most files' },
-  {
-    id: 'high',
-    label: 'Strong',
-    desc: 'Smallest file — pages flatten to images, text stays selectable',
-  },
-];
-
-// Common upload limits people run into (job-application forms, email, portals).
-const TARGET_PRESETS: { id: string; mb: number; label: string }[] = [
-  { id: '1', mb: 1, label: '1 MB' },
-  { id: '2', mb: 2, label: '2 MB' },
-  { id: '5', mb: 5, label: '5 MB' },
-];
-
-function levelLabel(level: CompressLevel): string {
-  return LEVELS.find((l) => l.id === level)?.label ?? level;
-}
+import { formatBytes } from '~/lib/format';
 
 /**
- * Compress PDFs. Two modes:
+ * Compress PDF — the hero tool, single file at a time.
  *
- *  - Target size (default): "get this under 2 MB" — the tool searches DPI ×
- *    JPEG quality for the sharpest page-rasterized output that fits the size
- *    limit. This is the demand-shaped path: most people are trying to clear an
- *    upload limit (job applications, forms, email attachments).
- *
- *  - By level: the classic Light / Balanced / Strong presets, for when the
- *    user wants to trade quality directly rather than name a size.
- *
- * UX flow in both: drop/pick → review queued files in a confirmation panel →
- * confirm to start (or cancel). Settings are snapshotted at confirm time.
+ * UX: drop → confirm (target size / quality) → processing (live phases) →
+ * done (the "shrink reveal": the size counts down, delta pops, download slides
+ * in). All wired to the real off-thread engine (compressClient); the reveal
+ * uses the real original/final byte sizes.
  */
-export default function CompressPdfConverter() {
-  const [mode, setMode] = useState<Mode>('target');
-  const [level, setLevel] = useState<CompressLevel>('medium');
-  const [targetChoice, setTargetChoice] = useState<string>('2');
-  const [customMb, setCustomMb] = useState<number>(2);
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [items, setItems] = useState<Item[]>([]);
-  const urls = useObjectUrls();
 
-  const targetMb = targetChoice === 'custom' ? customMb : Number(targetChoice);
-  const targetBytes = Math.round(targetMb * 1024 * 1024);
-  const targetLabel = `${targetMb} MB`;
-  const targetValid = mode !== 'target' || (targetMb > 0 && Number.isFinite(targetMb));
+type Phase = 'idle' | 'confirm' | 'processing' | 'done' | 'error';
+type Mode = 'size' | 'quality';
+
+const SIZE_TARGETS = [
+  { label: '≤ 1 MB', bytes: 1 * 1024 * 1024 },
+  { label: '≤ 2 MB', bytes: 2 * 1024 * 1024 },
+  { label: '≤ 5 MB', bytes: 5 * 1024 * 1024 },
+];
+const QUALITY_LEVELS: { label: string; level: CompressLevel }[] = [
+  { label: 'Light', level: 'low' },
+  { label: 'Balanced', level: 'medium' },
+  { label: 'Strong', level: 'high' },
+];
+const PIP_COUNT = 5;
+
+const ease = (t: number) => 1 - Math.pow(1 - t, 3);
+const prefersReduced = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+export default function CompressPdfConverter() {
+  const [phase, setPhase] = useState<Phase>('idle');
+  const [file, setFile] = useState<File | null>(null);
+  const [drag, setDrag] = useState(false);
+  const [mode, setMode] = useState<Mode>('size');
+  const [sizeIdx, setSizeIdx] = useState(1); // default ≤ 2 MB
+  const [levelIdx, setLevelIdx] = useState(1); // default Balanced
+  const [procMsg, setProcMsg] = useState('Working…');
+  const [procStep, setProcStep] = useState(0);
+  const [errorText, setErrorText] = useState('');
+  // done / reveal
+  const [origBytes, setOrigBytes] = useState(0);
+  const [finalBytes, setFinalBytes] = useState(0);
+  const [displayBytes, setDisplayBytes] = useState(0);
+  const [showDelta, setShowDelta] = useState(false);
+  const [showDownload, setShowDownload] = useState(false);
+  const [metTarget, setMetTarget] = useState(true);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const urlRef = useRef<string | null>(null);
+  const nameRef = useRef<string>('compressed.pdf');
+  const rafRef = useRef<number | null>(null);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const clearTimers = () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+  };
+  const revokeUrl = () => {
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = null;
+    }
+  };
+  useEffect(
+    () => () => {
+      clearTimers();
+      revokeUrl();
+    },
+    [],
+  );
 
   const reset = () => {
-    urls.revokeAll();
-    setItems([]);
+    clearTimers();
+    revokeUrl();
+    setPhase('idle');
+    setFile(null);
+    setDrag(false);
+    setProcStep(0);
+    setShowDelta(false);
+    setShowDownload(false);
   };
 
-  const handleSelect = (files: File[]) => {
-    if (files.length === 0) return;
-    setPendingFiles((prev) => [...prev, ...files]);
+  const stage = (f: File) => {
+    revokeUrl();
+    setFile(f);
+    setPhase('confirm');
+    setProcStep(0);
+    setShowDelta(false);
+    setShowDownload(false);
   };
 
-  const handleCancel = () => {
-    setPendingFiles([]);
+  const onPick = (files: FileList | null) => {
+    if (files && files[0]) stage(files[0]);
   };
 
-  const handleConfirm = async () => {
-    if (pendingFiles.length === 0 || !targetValid) return;
-    // Snapshot settings at confirm time so changing controls afterwards
-    // doesn't affect already-queued files.
-    const files = pendingFiles;
-    setPendingFiles([]);
-    if (mode === 'target') {
-      await compressFilesToTarget(files, targetBytes, targetLabel);
-    } else {
-      await compressFilesByLevel(files, level);
+  const targetBytes = SIZE_TARGETS[sizeIdx].bytes;
+
+  const start = async () => {
+    if (!file) return;
+    if (!(await isPdf(file))) {
+      setErrorText(`${file.name} isn’t a PDF.`);
+      setPhase('error');
+      return;
+    }
+    // "Already under target": nothing to shrink.
+    if (mode === 'size' && targetBytes >= file.size) {
+      setErrorText(
+        `This PDF is ${formatBytes(file.size)} — it already fits your ${SIZE_TARGETS[sizeIdx].label.replace('≤ ', '')} limit. Pick a smaller target to shrink it further.`,
+      );
+      setPhase('error');
+      return;
+    }
+
+    clearTimers();
+    setProcStep(0);
+    setProcMsg('Reading document…');
+    setPhase('processing');
+
+    const onProgress = (message: string) => {
+      setProcMsg(message);
+      setProcStep((s) => Math.min(s + 1, PIP_COUNT - 1));
+    };
+
+    try {
+      const stem = file.name.replace(/\.pdf$/i, '');
+      let oBytes: number;
+      let fBytes: number;
+      let blob: Blob;
+      let met = true;
+
+      if (mode === 'size') {
+        const r = await compressToTargetSmart(file, targetBytes, (p) => onProgress(p.message));
+        oBytes = r.originalSize;
+        fBytes = r.finalSize;
+        blob = r.blob;
+        met = r.metTarget;
+      } else {
+        const r = await compressByLevelSmart(file, QUALITY_LEVELS[levelIdx].level, (p) =>
+          onProgress(p.message),
+        );
+        oBytes = r.originalSize;
+        fBytes = r.finalSize;
+        blob = r.blob;
+        met = true;
+      }
+
+      revokeUrl();
+      urlRef.current = URL.createObjectURL(blob);
+      nameRef.current = fBytes < oBytes ? `${stem}-compressed.pdf` : `${stem}.pdf`;
+      setOrigBytes(oBytes);
+      setFinalBytes(fBytes);
+      setMetTarget(met);
+      setPhase('done');
+      revealShrink(oBytes, fBytes);
+    } catch (e) {
+      setErrorText(e instanceof Error ? e.message : 'Compression failed.');
+      setPhase('error');
     }
   };
 
-  const seedItems = (files: File[], badge: string): Item[] => {
-    const initial: Item[] = files.map((file) => ({
-      id: crypto.randomUUID(),
-      originalName: file.name,
-      originalSize: file.size,
-      badge,
-      status: 'pending',
-    }));
-    setItems((prev) => [...prev, ...initial]);
-    return initial;
-  };
-
-  const markError = (id: string, message: string) =>
-    setItems((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, status: 'error', error: message } : it)),
-    );
-
-  const markCompressing = (id: string) =>
-    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, status: 'compressing' } : it)));
-
-  const markProgress = (id: string, message: string) =>
-    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, progress: message } : it)));
-
-  const markDone = (id: string, patch: Partial<Item>) =>
-    setItems((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, status: 'done', ...patch } : it)),
-    );
-
-  const compressFilesToTarget = async (
-    files: File[],
-    bytes: number,
-    label: string,
-  ) => {
-    const initial = seedItems(files, `≤ ${label}`);
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const id = initial[i].id;
-      if (!(await isPdf(file))) {
-        markError(id, 'Not a PDF.');
-        continue;
-      }
-      markCompressing(id);
-      try {
-        const result = await compressToTargetSmart(file, bytes, (p) => markProgress(id, p.message));
-        const stem = file.name.replace(/\.pdf$/i, '');
-        const newName =
-          result.finalSize < result.originalSize ? `${stem}-compressed.pdf` : `${stem}.pdf`;
-
-        let note: string;
-        if (result.strategy === 'already-small') {
-          note = `Already under ${label}`;
-        } else if (!result.metTarget) {
-          note = `Smallest we could reach — still over ${label}`;
-        } else if (result.strategy === 'image-recompress') {
-          // The good case: fit the target without flattening, so text stays crisp.
-          note = 'Text kept sharp · images recompressed';
-        } else {
-          note = `${result.pagesRasterized} page${result.pagesRasterized === 1 ? '' : 's'} flattened`;
-          if (result.qpdfHelped) note += ' · qpdf saved more';
-        }
-
-        markDone(id, {
-          newName,
-          newSize: result.blob.size,
-          url: urls.track(result.blob),
-          note,
-          metTarget: result.metTarget,
-        });
-      } catch (e) {
-        markError(id, e instanceof Error ? e.message : 'Compression failed.');
-      }
+  const revealShrink = (o: number, f: number) => {
+    if (prefersReduced()) {
+      setDisplayBytes(f);
+      setShowDelta(true);
+      setShowDownload(true);
+      return;
     }
+    setDisplayBytes(o);
+    setShowDelta(false);
+    setShowDownload(false);
+    const dur = 720;
+    const startT = performance.now();
+    let done = false;
+    const complete = () => {
+      if (done) return;
+      done = true;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      setDisplayBytes(f);
+      setShowDelta(true);
+      timers.current.push(setTimeout(() => setShowDownload(true), 160));
+    };
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - startT) / dur);
+      setDisplayBytes(o + (f - o) * ease(p));
+      if (p < 1) rafRef.current = requestAnimationFrame(tick);
+      else complete();
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    timers.current.push(setTimeout(complete, dur + 400)); // fallback for a throttled tab
   };
 
-  const compressFilesByLevel = async (files: File[], levelToUse: CompressLevel) => {
-    const initial = seedItems(files, levelLabel(levelToUse));
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const id = initial[i].id;
-      if (!(await isPdf(file))) {
-        markError(id, 'Not a PDF.');
-        continue;
-      }
-      markCompressing(id);
-      try {
-        const result = await compressByLevelSmart(file, levelToUse, (p) => markProgress(id, p.message));
-        const stem = file.name.replace(/\.pdf$/i, '');
-        const newName = result.smallerThanOriginal
-          ? `${stem}-compressed.pdf`
-          : `${stem}.pdf`;
-
-        const noteParts: string[] = [];
-        if (result.smallerThanOriginal) {
-          if (result.strategy === 'rasterize') {
-            noteParts.push(
-              `${result.pagesRasterized} page${result.pagesRasterized === 1 ? '' : 's'} flattened`,
-            );
-            if (result.qpdfPassRan && result.qpdfHelped) noteParts.push('qpdf saved more');
-          } else {
-            if (result.imagesRecompressed > 0) {
-              noteParts.push(
-                `${result.imagesRecompressed} image${result.imagesRecompressed === 1 ? '' : 's'} recompressed`,
-              );
-            }
-            if (result.qpdfPassRan) {
-              noteParts.push(result.qpdfHelped ? 'qpdf saved more' : 'qpdf ran');
-            } else if (noteParts.length === 0) {
-              noteParts.push('repacked');
-            }
-          }
-        } else {
-          noteParts.push('Already optimal — original returned');
-        }
-
-        markDone(id, {
-          newName,
-          newSize: result.blob.size,
-          url: urls.track(result.blob),
-          note: noteParts.join(' · '),
-        });
-      } catch (e) {
-        markError(id, e instanceof Error ? e.message : 'Compression failed.');
-      }
-    }
+  const download = () => {
+    if (!urlRef.current) return;
+    const a = document.createElement('a');
+    a.href = urlRef.current;
+    a.download = nameRef.current;
+    a.click();
   };
 
-  const inProgress = items.filter(
-    (it) => it.status === 'pending' || it.status === 'compressing',
-  ).length;
-  const doneCount = items.filter((it) => it.status === 'done').length;
-  const compressing = inProgress > 0;
+  const deltaPct = origBytes > 0 ? Math.round((1 - finalBytes / origBytes) * 100) : 0;
 
   return (
-    <div className="space-y-8">
-      {/* Mode toggle */}
-      <div
-        className="inline-flex rounded-lg border p-1"
-        role="tablist"
-        aria-label="Compression mode"
-        style={{ borderColor: 'var(--color-border)' }}
-      >
-        {(
-          [
-            { id: 'target', label: 'Fit under a size' },
-            { id: 'level', label: 'By quality level' },
-          ] as { id: Mode; label: string }[]
-        ).map((m) => {
-          const selected = mode === m.id;
-          return (
-            <button
-              key={m.id}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              onClick={() => setMode(m.id)}
-              className="rounded-md px-3 py-1.5 text-sm font-medium transition"
-              style={{
-                background: selected ? 'var(--color-accent)' : 'transparent',
-                color: selected ? 'white' : 'var(--color-muted)',
-              }}
-            >
-              {m.label}
-            </button>
-          );
-        })}
-      </div>
+    <div style={cardStyle}>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        style={{ display: 'none' }}
+        onChange={(e) => onPick(e.target.files)}
+      />
 
-      {mode === 'target' ? (
-        <fieldset>
-          <legend className="mb-2 text-sm font-medium">Target size</legend>
-          <div className="flex flex-wrap gap-2">
-            {TARGET_PRESETS.map((t) => {
-              const selected = targetChoice === t.id;
-              const id = `target-${t.id}`;
-              return (
-                <label
-                  key={t.id}
-                  htmlFor={id}
-                  className="cursor-pointer rounded-lg border px-4 py-2 text-sm font-medium transition"
-                  style={{
-                    borderColor: selected ? 'var(--color-accent)' : 'var(--color-border)',
-                    background: selected ? 'var(--color-accent-soft)' : 'transparent',
-                  }}
-                >
-                  <input
-                    id={id}
-                    type="radio"
-                    name="target"
-                    className="sr-only"
-                    checked={selected}
-                    onChange={() => setTargetChoice(t.id)}
-                  />
-                  Under {t.label}
-                </label>
-              );
-            })}
-            <label
-              htmlFor="target-custom"
-              className="flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition"
-              style={{
-                borderColor: targetChoice === 'custom' ? 'var(--color-accent)' : 'var(--color-border)',
-                background: targetChoice === 'custom' ? 'var(--color-accent-soft)' : 'transparent',
-              }}
-            >
-              <input
-                id="target-custom"
-                type="radio"
-                name="target"
-                className="sr-only"
-                checked={targetChoice === 'custom'}
-                onChange={() => setTargetChoice('custom')}
-              />
-              <span>Custom</span>
-              <input
-                type="number"
-                min="0.1"
-                step="0.1"
-                value={customMb}
-                onFocus={() => setTargetChoice('custom')}
-                onChange={(e) => setCustomMb(parseFloat(e.target.value))}
-                className="w-16 rounded border px-1 py-0.5 text-sm"
-                style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg)' }}
-                aria-label="Custom target size in megabytes"
-              />
-              <span style={{ color: 'var(--color-muted)' }}>MB</span>
-            </label>
-          </div>
-          <p className="mt-2 text-xs" style={{ color: 'var(--color-muted)' }}>
-            We find the sharpest version of your PDF that fits under this size. Pages become
-            images with an invisible, still-selectable text layer.
-          </p>
-        </fieldset>
-      ) : (
-        <>
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium">Compression level</legend>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {LEVELS.map((lvl) => {
-                const selected = level === lvl.id;
-                const id = `lvl-${lvl.id}`;
-                return (
-                  <label
-                    key={lvl.id}
-                    htmlFor={id}
-                    className="block cursor-pointer rounded-lg border p-3 transition"
-                    style={{
-                      borderColor: selected ? 'var(--color-accent)' : 'var(--color-border)',
-                      background: selected ? 'var(--color-accent-soft)' : 'transparent',
-                    }}
-                  >
-                    <input
-                      id={id}
-                      type="radio"
-                      name="level"
-                      value={lvl.id}
-                      className="sr-only"
-                      checked={selected}
-                      onChange={() => setLevel(lvl.id)}
-                    />
-                    <div className="text-sm font-medium">{lvl.label}</div>
-                    <div className="text-xs" style={{ color: 'var(--color-muted)' }}>
-                      {lvl.desc}
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-
-          <div
-            className="rounded-lg border p-3 text-xs leading-relaxed"
-            style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}
-          >
-            <strong>Light</strong> and <strong>Balanced</strong> recompress embedded images and
-            repack the PDF structure — text, fonts, form fields, and bookmarks all preserved.
-            <br />
-            <strong>Strong</strong> goes much further: pages are flattened to images with an
-            invisible text layer for selection. Form fields, bookmarks, annotations, and
-            accessibility tags are dropped — but you can typically expect 80–90% smaller files.
-          </div>
-        </>
-      )}
-
-      {pendingFiles.length === 0 ? (
-        <FileDrop accept="application/pdf,.pdf" multiple onFiles={handleSelect}>
-          <p className="mb-2 text-lg font-medium">Drop PDFs here</p>
-          <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-            or click to select · multiple files OK
-          </p>
-        </FileDrop>
-      ) : (
-        <PendingFilesConfirmation
-          files={pendingFiles}
-          verb="compress"
-          badge={mode === 'target' ? `≤ ${targetLabel}` : levelLabel(level)}
-          hint={
-            mode === 'target'
-              ? 'Change the target size above before confirming if you want a different limit.'
-              : 'Change the level above before confirming if you want a different setting.'
-          }
-          disabled={compressing || !targetValid}
-          onConfirm={handleConfirm}
-          onCancel={handleCancel}
-        />
-      )}
-
-      {items.length > 0 && (
-        <ResultList
-          heading={
-            <>
-              Results
-              <span
-                className="ml-2 text-sm font-normal"
-                style={{ color: 'var(--color-muted)' }}
-              >
-                {inProgress > 0
-                  ? `· compressing ${inProgress}…`
-                  : `· ${doneCount} of ${items.length} ready`}
-              </span>
-            </>
-          }
-          onClear={reset}
+      {phase === 'idle' && (
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="Drop a PDF here, or click to choose a file"
+          onClick={() => inputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              inputRef.current?.click();
+            }
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!drag) setDrag(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            setDrag(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDrag(false);
+            onPick(e.dataTransfer.files);
+          }}
+          style={dropStyle(drag)}
         >
-          {items.map((it) => (
-            <DownloadRow
-              key={it.id}
-              header={
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="truncate text-sm font-medium">
-                    {it.status === 'done' ? it.newName : it.originalName}
-                  </span>
-                  <span
-                    className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase"
-                    style={{
-                      background:
-                        it.metTarget === false ? 'var(--color-danger)' : 'var(--color-accent-soft)',
-                      color: it.metTarget === false ? 'white' : 'var(--color-accent)',
-                    }}
-                  >
-                    {it.badge}
-                  </span>
-                </div>
-              }
-              meta={
-                <>
-                  {it.status === 'pending' && 'Queued…'}
-                  {it.status === 'compressing' && (it.progress ?? 'Shrinking…')}
-                  {it.status === 'done' && it.newSize !== undefined && (
-                    <>
-                      {formatBytes(it.originalSize)} → {formatBytes(it.newSize)} (
-                      {sizeDelta(it.originalSize, it.newSize)})
-                      {it.note && <span> · {it.note}</span>}
-                    </>
-                  )}
-                  {it.status === 'error' && <ErrorText inline>{it.error}</ErrorText>}
-                </>
-              }
-              href={it.status === 'done' ? it.url : undefined}
-              filename={it.status === 'done' ? it.newName : undefined}
-            />
-          ))}
-        </ResultList>
+          <div
+            style={{ display: 'flex', justifyContent: 'center', marginBottom: 14, color: 'var(--faint)' }}
+          >
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></svg>
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)', marginBottom: 4 }}>Drop a PDF here</div>
+          <div style={{ fontSize: 13.5, color: 'var(--muted)', marginBottom: 18 }}>it’s processed right here, on your device</div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              inputRef.current?.click();
+            }}
+            style={secondaryBtn}
+          >
+            Choose a file
+          </button>
+        </div>
+      )}
+
+      {phase === 'confirm' && file && (
+        <div style={{ animation: 'rise 240ms var(--ease-out-quad) both', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div style={fileRow}>
+            <div style={fileIcon}>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{file.name}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{formatBytes(file.size)} · PDF</div>
+            </div>
+            <button type="button" onClick={reset} aria-label="Remove file" style={removeBtn}>×</button>
+          </div>
+
+          <div>
+            <div style={optLabel}>Target</div>
+            <div style={segTrack}>
+              <div style={segIndicator(mode)} />
+              <button type="button" onClick={() => setMode('size')} style={segBtn(mode === 'size')}>Fit under a size</button>
+              <button type="button" onClick={() => setMode('quality')} style={segBtn(mode === 'quality')}>By quality level</button>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {mode === 'size'
+                ? SIZE_TARGETS.map((t, i) => (
+                    <button key={t.label} type="button" onClick={() => setSizeIdx(i)} style={chip(i === sizeIdx)}>{t.label}</button>
+                  ))
+                : QUALITY_LEVELS.map((l, i) => (
+                    <button key={l.label} type="button" onClick={() => setLevelIdx(i)} style={chip(i === levelIdx)}>{l.label}</button>
+                  ))}
+            </div>
+          </div>
+
+          <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.45 }}>
+            {mode === 'size'
+              ? 'We’ll aim just under your limit and keep text selectable.'
+              : 'Light/Balanced keep everything; Strong flattens pages to images for the biggest savings (text stays selectable).'}
+          </div>
+
+          <button type="button" className="nudge" onClick={start} style={primaryBtn}>
+            <span>Compress PDF</span>
+            <span className="nudge-arrow">&#8594;</span>
+          </button>
+        </div>
+      )}
+
+      {phase === 'processing' && (
+        <div style={{ animation: 'rise 240ms var(--ease-out-quad) both', padding: '10px 2px 6px' }}>
+          <div style={{ ...eyebrow, marginBottom: 16 }}>Working locally</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 16, color: 'var(--ink)', minHeight: 26 }}>
+            <span key={`hb${procStep}`} style={{ display: 'inline-block', color: 'var(--accent)', fontWeight: 700, fontSize: 17, animation: 'tick 420ms var(--ease-out-quad)' }}>&#8594;</span>
+            <span key={`m${procStep}`} style={{ display: 'inline-block', fontWeight: 500, animation: 'fadeup 260ms var(--ease-out-quad) both' }}>{procMsg}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 20 }}>
+            {Array.from({ length: PIP_COUNT }).map((_, i) => (
+              <div key={i} style={pip(i, procStep)} />
+            ))}
+          </div>
+          <div style={{ fontSize: 12.5, color: 'var(--faint)', marginTop: 18 }}>No data leaves your device — check the Network tab.</div>
+        </div>
+      )}
+
+      {phase === 'error' && (
+        <div style={{ animation: 'rise 260ms var(--ease-out-quad) both' }}>
+          <div style={dangerPanel}>
+            <div style={{ flexShrink: 0, marginTop: 1, color: 'var(--danger)' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+            </div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--danger-title)', marginBottom: 4 }}>Already under your target</div>
+              <div style={{ fontSize: 13.5, color: 'var(--ink-soft)', lineHeight: 1.5 }}>{errorText}</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 20 }}>
+            <button type="button" className="nudge" onClick={() => setPhase('confirm')} style={{ ...primaryBtn, width: 'auto', padding: '12px 18px', fontSize: 14.5, whiteSpace: 'nowrap' }}>
+              <span>Pick a smaller target</span><span className="nudge-arrow">&#8594;</span>
+            </button>
+            <button type="button" onClick={reset} style={linkBtn}>Start over</button>
+          </div>
+        </div>
+      )}
+
+      {phase === 'done' && (
+        <div style={{ animation: 'rise 240ms var(--ease-out-quad) both' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-soft)', marginBottom: 18 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+            Done — and it never left your device.
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 18, color: 'var(--faint)', fontWeight: 500 }}>{formatBytes(origBytes)}</span>
+            <span style={{ fontSize: 20, color: 'var(--accent)', fontWeight: 700 }}>&#8594;</span>
+            <span style={{ fontSize: 42, letterSpacing: '-0.02em', color: 'var(--ink)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{formatBytes(displayBytes)}</span>
+            {showDelta && deltaPct > 0 && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', background: 'var(--accent-soft-bg)', color: 'var(--accent-soft-text)', padding: '5px 11px', borderRadius: 999, fontSize: 13, fontWeight: 700, animation: 'pulse 460ms var(--ease-out-quad)' }}>&minus;{deltaPct}% smaller</span>
+            )}
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 12 }}>
+            {metTarget ? `${file?.name ?? 'Your PDF'} · ready to save` : 'Smallest we could reach — a bit over your target'}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 26 }}>
+            <button type="button" onClick={download} style={downloadStyle(showDownload)}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12" /><path d="M7 11l5 4 5-4" /><path d="M5 20h14" /></svg>
+              Download
+            </button>
+            <button type="button" onClick={reset} style={linkBtn}>Compress another &#8594;</button>
+          </div>
+        </div>
       )}
     </div>
   );
+}
+
+// ── Styles ──
+const cardStyle: CSSProperties = {
+  margin: '22px 0 8px',
+  borderRadius: 16,
+  padding: 22,
+  background: 'var(--card)',
+  border: '1px solid var(--hair)',
+  boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+};
+const eyebrow: CSSProperties = {
+  fontSize: 11.5,
+  fontWeight: 600,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+  color: 'var(--muted)',
+};
+const optLabel: CSSProperties = { ...eyebrow, letterSpacing: '0.06em', marginBottom: 10 };
+const secondaryBtn: CSSProperties = {
+  padding: '9px 16px',
+  borderRadius: 10,
+  border: '1px solid var(--hair-2)',
+  background: 'var(--card)',
+  color: 'var(--ink)',
+  fontSize: 13.5,
+  fontWeight: 600,
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+  whiteSpace: 'nowrap',
+};
+const primaryBtn: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  width: '100%',
+  background: 'var(--accent)',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 12,
+  padding: '13px 18px',
+  fontSize: 15,
+  fontWeight: 600,
+  cursor: 'pointer',
+  boxShadow: '0 2px 10px rgba(249,115,22,0.28)',
+  fontFamily: 'inherit',
+};
+const linkBtn: CSSProperties = {
+  background: 'none',
+  border: 'none',
+  fontSize: 14,
+  color: 'var(--muted)',
+  cursor: 'pointer',
+  fontFamily: 'inherit',
+  padding: 0,
+};
+const fileRow: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 12,
+  background: 'var(--field)',
+  border: '1px solid var(--hair-soft)',
+  borderRadius: 12,
+  padding: '12px 14px',
+};
+const fileIcon: CSSProperties = {
+  width: 38,
+  height: 38,
+  flexShrink: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'var(--accent-soft-bg)',
+  borderRadius: 9,
+  color: 'var(--accent-soft-text)',
+};
+const removeBtn: CSSProperties = {
+  width: 28,
+  height: 28,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: 8,
+  border: 'none',
+  background: 'transparent',
+  color: 'var(--faint)',
+  fontSize: 20,
+  lineHeight: 1,
+  cursor: 'pointer',
+};
+const segTrack: CSSProperties = {
+  position: 'relative',
+  display: 'flex',
+  background: 'var(--field)',
+  borderRadius: 12,
+  padding: 4,
+  marginBottom: 14,
+};
+const dangerPanel: CSSProperties = {
+  display: 'flex',
+  gap: 12,
+  background: 'var(--danger-bg)',
+  border: '1px solid var(--danger-border)',
+  borderRadius: 12,
+  padding: 16,
+};
+function segIndicator(mode: Mode): CSSProperties {
+  return {
+    position: 'absolute',
+    top: 4,
+    bottom: 4,
+    left: 4,
+    width: 'calc(50% - 4px)',
+    background: 'var(--card)',
+    borderRadius: 9,
+    boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+    transform: mode === 'size' ? 'translateX(0)' : 'translateX(100%)',
+    transition: 'transform 240ms var(--ease-in-out)',
+  };
+}
+function segBtn(active: boolean): CSSProperties {
+  return {
+    position: 'relative',
+    zIndex: 1,
+    flex: 1,
+    background: 'transparent',
+    border: 'none',
+    padding: '9px 8px',
+    fontSize: 13.5,
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    color: active ? 'var(--ink)' : 'var(--muted)',
+    transition: 'color 240ms',
+  };
+}
+function chip(sel: boolean): CSSProperties {
+  return {
+    flex: '0 0 auto',
+    textAlign: 'center',
+    padding: '10px 14px',
+    borderRadius: 10,
+    fontSize: 13.5,
+    fontWeight: 600,
+    cursor: 'pointer',
+    background: sel ? 'var(--accent-soft-bg)' : 'var(--card)',
+    border: sel ? '1px solid var(--accent)' : '1px solid var(--hair-2)',
+    color: sel ? 'var(--accent-soft-text)' : 'var(--ink-soft)',
+    fontFamily: 'inherit',
+    transition: 'background 160ms, border-color 160ms, color 160ms',
+    animation: sel ? 'overshoot 240ms var(--ease-out-quad)' : 'none',
+  };
+}
+function pip(i: number, step: number): CSSProperties {
+  const cur = i === step;
+  const done = i < step;
+  return {
+    width: cur ? 22 : 6,
+    height: 6,
+    borderRadius: 999,
+    background: done || cur ? 'var(--accent)' : 'var(--line-strong)',
+    transition: 'width 240ms var(--ease-in-out), background 240ms',
+  };
+}
+function dropStyle(drag: boolean): CSSProperties {
+  return {
+    border: drag ? '1.5px dashed var(--accent)' : '1.5px dashed var(--hair-3)',
+    borderRadius: 14,
+    padding: '40px 24px',
+    textAlign: 'center',
+    cursor: 'pointer',
+    outline: 'none',
+    background: drag ? 'var(--accent-wash)' : 'var(--card)',
+    boxShadow: drag ? 'inset 0 0 0 2px rgba(249,115,22,0.22)' : 'inset 0 0 0 2px rgba(249,115,22,0)',
+    transform: drag ? 'scale(1.01)' : 'scale(1)',
+    transition:
+      'transform 160ms var(--ease-out-quad), border-color 160ms, background 160ms, box-shadow 160ms',
+  };
+}
+function downloadStyle(show: boolean): CSSProperties {
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    background: 'var(--ink-btn-bg)',
+    color: 'var(--ink-btn-text)',
+    border: 'none',
+    borderRadius: 12,
+    padding: '12px 18px',
+    fontSize: 15,
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.14)',
+    transition: 'transform 420ms var(--ease-out-quad), opacity 420ms var(--ease-out-quad)',
+    transform: show ? 'translateX(0)' : 'translateX(28px)',
+    opacity: show ? 1 : 0,
+    pointerEvents: show ? 'auto' : 'none',
+  };
 }
