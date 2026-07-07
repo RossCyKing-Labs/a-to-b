@@ -35,8 +35,11 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { encodeJpeg } from './jpegEncoder';
 import type { OnCompressProgress } from './compressProgress';
 
-// One-time worker setup — same pattern pdfTools.ts uses
-if (typeof window !== 'undefined' && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+// One-time pdf.js worker setup. Unconditional (not window-guarded): this
+// module also runs INSIDE the compress Web Worker, where `window` is
+// undefined but pdf.js still requires workerSrc — without it, getDocument
+// throws and the whole pipeline silently falls back to the main thread.
+if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 }
 
@@ -222,6 +225,7 @@ export async function renderPdfToPages(
     onProgress?.({
       message: total > 1 ? `Rendering page ${i} of ${total}…` : 'Rendering page…',
       fraction: (i - 1) / total,
+      stage: 'render',
     });
     const srcPage = await srcPdf.getPage(i);
     const rendered = await renderPageToPixels(srcPage, ctx, renderScale);
