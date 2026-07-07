@@ -1,57 +1,224 @@
 ---
 import BaseLayout from '~/layouts/BaseLayout.astro';
+
+const promises = [
+  {
+    icon: 'cpu',
+    title: 'Processed on-device',
+    body: 'Every byte is handled by your own CPU via WebAssembly — never a server.',
+  },
+  {
+    icon: 'eyeoff',
+    title: 'Nothing is logged',
+    body: 'No analytics, no cookies, no fingerprinting. We keep nothing because we receive nothing.',
+  },
+  {
+    icon: 'shield',
+    title: 'Verifiable, not promised',
+    body: 'The zero-requests claim is something you can watch in DevTools, not a policy to trust.',
+  },
+];
+
+const icons: Record<string, string> = {
+  cpu: 'M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2M5 5h14v14H5zM9 9h6v6H9z',
+  eyeoff:
+    'M9.9 4.2A9.5 9.5 0 0 1 12 4c5 0 9 5 9 8a12 12 0 0 1-2 2.8M6.6 6.6C3.9 8.2 2 10.8 2 12c0 2 4 8 10 8a9 9 0 0 0 3.4-.7M3 3l18 18',
+  shield: 'M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z',
+};
 ---
 
 <BaseLayout
   title="Privacy — your files never leave your device · a → b"
   description="a → b has no upload endpoint. All file conversion happens in your browser. No trackers, no cookies, no accounts — and here's how to verify it yourself."
 >
-  <h1 class="mb-6 text-3xl font-bold">Privacy</h1>
-
-  <p class="mb-8 text-xl font-medium">Your files never leave your device.</p>
-
-  <div class="space-y-6 text-base leading-relaxed">
-    <p>
-      This is not a marketing claim — it's an architectural fact. There is no upload endpoint on
-      this site. All conversion happens in your browser using the Canvas API and WebAssembly.
+  <div class="wrap">
+    <div class="eyebrow">Privacy</div>
+    <h1>Your files never leave your device.</h1>
+    <p class="intro">
+      This isn’t a policy you have to trust — it’s something you can watch happen. Here’s exactly
+      what a → b does, and how to verify it yourself in about ten seconds.
     </p>
 
-    <h2 class="mt-8 text-xl font-semibold">What we don't do</h2>
-    <ul class="list-disc space-y-2 pl-6">
-      <li>We don't upload your files anywhere.</li>
-      <li>We don't use Google Analytics, Meta Pixel, or any third-party tracker.</li>
-      <li>We don't set tracking cookies.</li>
-      <li>We don't load fonts, scripts, or images from third parties.</li>
-      <li>We don't show ads.</li>
-      <li>We don't have user accounts.</li>
-      <li>We don't store anything about you, locally or otherwise.</li>
-    </ul>
+    <div class="promises">
+      {
+        promises.map((p) => (
+          <div class="promise">
+            <div class="promise-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d={icons[p.icon]} />
+              </svg>
+            </div>
+            <div class="promise-title">{p.title}</div>
+            <div class="promise-body">{p.body}</div>
+          </div>
+        ))
+      }
+    </div>
 
-    <h2 class="mt-8 text-xl font-semibold">Verify it yourself</h2>
-    <ol class="list-decimal space-y-2 pl-6">
-      <li>Open your browser's DevTools and select the Network tab.</li>
-      <li>Drop in a file and convert it.</li>
-      <li>You'll see zero outbound requests during conversion.</li>
-    </ol>
-
-    <h2 class="mt-8 text-xl font-semibold">A note on the service worker</h2>
-    <p>
-      We install a service worker so the site works offline after your first visit. It only
-      caches a → b's own assets (HTML, JavaScript, the WebAssembly conversion libraries) so the
-      app is fast and usable without a connection. It never sees your files, never sends them
-      anywhere, and only ever fetches from this domain. You can verify in DevTools → Application →
-      Service Workers.
-    </p>
-
-    <h2 class="mt-8 text-xl font-semibold">If we ever break this</h2>
-    <p>
-      Please open an issue on
-      <a
-        href="https://github.com/rosscyking1115/a-to-b"
-        class="underline hover:no-underline"
-        rel="noopener">GitHub</a
-      >. The privacy promise is non-negotiable; any change that adds a tracker, third-party
-      request, or upload endpoint would be a bug.
-    </p>
+    <div class="verify">
+      <div class="verify-head">
+        <div class="verify-eyebrow">Verify it yourself</div>
+        <div class="verify-title">Open your Network tab and watch nothing happen.</div>
+        <div class="verify-copy">
+          Press <span class="kbd">F12</span> (or <span class="kbd">&#8997;&#8984;I</span>), open
+          <strong>Network</strong>, then run any conversion. The request list stays empty — because
+          there’s no server to call.
+        </div>
+      </div>
+      <div class="netpanel">
+        <div class="net-rec">
+          <span class="net-dot"></span>Network &middot; Recording
+        </div>
+        <div class="net-cols"><span>Name</span><span>Size</span></div>
+        <div class="net-empty">No requests recorded.</div>
+        <div class="net-foot">0 requests &nbsp;&middot;&nbsp; 0 B transferred</div>
+      </div>
+    </div>
   </div>
 </BaseLayout>
+
+<style>
+  .wrap {
+    padding: 48px 0 8px;
+  }
+  .eyebrow {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-size: 34px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0 0 14px;
+    color: var(--ink);
+    font-weight: 600;
+    max-width: 20ch;
+  }
+  .intro {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    margin: 0 0 32px;
+    max-width: 60ch;
+  }
+  .promises {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+  .promise {
+    border: 1px solid var(--hair);
+    border-radius: 14px;
+    padding: 18px;
+    background: var(--card);
+  }
+  .promise-icon {
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .promise-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 5px;
+  }
+  .promise-body {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .verify {
+    border: 1px solid var(--hair);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--card);
+  }
+  .verify-head {
+    padding: 20px 22px;
+    border-bottom: 1px solid var(--hair);
+  }
+  .verify-eyebrow {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .verify-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .verify-copy {
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    max-width: 60ch;
+  }
+  .verify-copy strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .kbd {
+    font-family: var(--font-mono);
+    background: var(--field);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 12.5px;
+  }
+  .netpanel {
+    padding: 16px 18px;
+    background: var(--field);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+  }
+  .net-rec {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .net-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--danger);
+    display: inline-block;
+  }
+  .net-cols {
+    display: flex;
+    justify-content: space-between;
+    color: var(--faint);
+    padding: 7px 0;
+    border-bottom: 1px solid var(--hair);
+  }
+  .net-empty {
+    text-align: center;
+    color: var(--faint);
+    padding: 26px 0;
+    font-family: var(--font-sans);
+    font-size: 13px;
+  }
+  .net-foot {
+    color: var(--muted);
+    padding-top: 10px;
+    border-top: 1px solid var(--hair);
+  }
+
+  @media (max-width: 720px) {
+    h1 {
+      font-size: 27px;
+    }
+    .promises {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
