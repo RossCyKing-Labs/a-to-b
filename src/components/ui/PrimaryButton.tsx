@@ -1,20 +1,41 @@
-import type { ButtonHTMLAttributes } from 'react';
+import type { ButtonHTMLAttributes, CSSProperties } from 'react';
 
 /**
- * The accent-coloured primary action button (Merge, Compress, Confirm, …).
- * Was inline-styled `background: var(--color-accent)` markup repeated in
- * several components.
+ * The accent-coloured primary action button (Merge, Build PDF, …).
  */
 export default function PrimaryButton({
   className = '',
+  style,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       type="button"
       {...props}
-      className={`rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
-      style={{ background: 'var(--color-accent)', ...props.style }}
+      className={`nudge ${className}`}
+      style={{
+        ...base,
+        opacity: props.disabled ? 0.5 : 1,
+        cursor: props.disabled ? 'not-allowed' : 'pointer',
+        ...style,
+      }}
     />
   );
 }
+
+const base: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  background: 'var(--accent)',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 12,
+  padding: '13px 20px',
+  fontSize: 15,
+  fontWeight: 600,
+  cursor: 'pointer',
+  boxShadow: '0 2px 10px rgba(249,115,22,0.28)',
+  fontFamily: 'inherit',
+};
