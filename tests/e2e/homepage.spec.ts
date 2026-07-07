@@ -9,7 +9,7 @@ test.describe('homepage', () => {
     // Scope to <main>: the header's Tools dropdown and the footer also link to
     // every tool, so a page-wide role query would match multiple elements.
     const main = page.locator('main');
-    await expect(main.getByRole('link', { name: /^Image converter/ })).toBeVisible();
+    await expect(main.getByRole('link', { name: /^Convert image/ })).toBeVisible();
     await expect(main.getByRole('link', { name: /^Merge PDF/ })).toBeVisible();
     await expect(main.getByRole('link', { name: /^Split PDF/ })).toBeVisible();
     await expect(main.getByRole('link', { name: /^JPG → PDF/ })).toBeVisible();
