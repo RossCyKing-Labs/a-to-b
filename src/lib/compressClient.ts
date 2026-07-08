@@ -55,6 +55,10 @@ function runInWorker<T>(request: WorkerRequest, onProgress?: OnCompressProgress)
     getWorker().then(
       (worker) => {
         const id = `compress-${++nextId}`;
+        const cleanup = () => {
+          worker.removeEventListener('message', handler);
+          worker.removeEventListener('error', onError);
+        };
         const handler = (
           event: MessageEvent<
             | { id: string; progress: CompressProgress }
@@ -68,14 +72,26 @@ function runInWorker<T>(request: WorkerRequest, onProgress?: OnCompressProgress)
             onProgress?.(msg.progress);
             return; // more messages to come
           }
-          worker.removeEventListener('message', handler);
+          cleanup();
           if (msg.ok) resolve(msg.result);
           else reject(new Error(msg.error));
         };
+        // A worker whose script fails to load (e.g. its chunk was replaced by
+        // a new deploy) fires 'error' and never posts a message — without
+        // this listener the request would hang in "processing" forever.
+        const onError = (event: ErrorEvent) => {
+          cleanup();
+          workerPromise = null; // dead worker — let a later call recreate it
+          reject(new Error(event.message || 'Compression worker failed to start.'));
+        };
         worker.addEventListener('message', handler);
+        worker.addEventListener('error', onError);
         worker.postMessage({ id, ...request }, [request.bytes]);
       },
-      (err) => reject(err),
+      (err) => {
+        workerPromise = null; // the module import itself failed — don't cache it
+        reject(err);
+      },
     );
   });
 }

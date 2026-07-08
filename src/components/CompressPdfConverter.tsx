@@ -3,6 +3,7 @@ import { isPdf, type CompressLevel } from '~/lib/pdfTools';
 import { compressToTargetSmart, compressByLevelSmart } from '~/lib/compressClient';
 import { formatBytes } from '~/lib/format';
 import type { CompressAttempt, CompressProgress, CompressStage } from '~/lib/compressProgress';
+import { isChunkLoadError, reloadOnceForStaleChunk } from '~/lib/staleChunk';
 
 /**
  * Compress PDF — the hero tool, single file at a time.
@@ -15,6 +16,17 @@ import type { CompressAttempt, CompressProgress, CompressStage } from '~/lib/com
 
 type Phase = 'idle' | 'confirm' | 'processing' | 'done' | 'error';
 type Mode = 'size' | 'quality';
+type ErrorKind = 'already-under' | 'not-pdf' | 'stale-update' | 'generic';
+
+const ERROR_TITLES: Record<ErrorKind, string> = {
+  'already-under': 'Already under your target',
+  'not-pdf': 'That file isn’t a PDF',
+  'stale-update': 'This tool was updated',
+  generic: 'Something went wrong',
+};
+
+/** Index into SIZE_TARGETS meaning "the custom MB input is selected". */
+const CUSTOM_IDX = 3;
 
 const SIZE_TARGETS = [
   { label: '≤ 1 MB', bytes: 1 * 1024 * 1024 },
@@ -55,6 +67,8 @@ export default function CompressPdfConverter() {
   const [procAttempts, setProcAttempts] = useState<CompressAttempt[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const [errorText, setErrorText] = useState('');
+  const [errorKind, setErrorKind] = useState<ErrorKind>('generic');
+  const [customMb, setCustomMb] = useState(10);
   // done / reveal
   const [origBytes, setOrigBytes] = useState(0);
   const [finalBytes, setFinalBytes] = useState(0);
@@ -126,19 +140,27 @@ export default function CompressPdfConverter() {
     if (files && files[0]) stage(files[0]);
   };
 
-  const targetBytes = SIZE_TARGETS[sizeIdx].bytes;
+  const isCustom = sizeIdx === CUSTOM_IDX;
+  const customValid = Number.isFinite(customMb) && customMb > 0;
+  const targetValid = mode !== 'size' || !isCustom || customValid;
+  const targetBytes = isCustom
+    ? Math.round((customValid ? customMb : 0) * 1024 * 1024)
+    : SIZE_TARGETS[sizeIdx].bytes;
+  const targetLabel = isCustom ? `${customMb} MB` : SIZE_TARGETS[sizeIdx].label.replace('≤ ', '');
 
   const start = async () => {
-    if (!file) return;
+    if (!file || !targetValid) return;
     if (!(await isPdf(file))) {
-      setErrorText(`${file.name} isn’t a PDF.`);
+      setErrorKind('not-pdf');
+      setErrorText(`${file.name} isn’t a PDF. Choose a PDF file to compress.`);
       setPhase('error');
       return;
     }
     // "Already under target": nothing to shrink.
     if (mode === 'size' && targetBytes >= file.size) {
+      setErrorKind('already-under');
       setErrorText(
-        `This PDF is ${formatBytes(file.size)} — it already fits your ${SIZE_TARGETS[sizeIdx].label.replace('≤ ', '')} limit. Pick a smaller target to shrink it further.`,
+        `This PDF is ${formatBytes(file.size)} — it already fits your ${targetLabel} limit. Pick a smaller target to shrink it further.`,
       );
       setPhase('error');
       return;
@@ -190,6 +212,19 @@ export default function CompressPdfConverter() {
       setPhase('done');
       revealShrink(oBytes, fBytes);
     } catch (e) {
+      // A failed chunk import usually means a new deploy replaced the
+      // fingerprinted assets while this page was open — reload once to pick
+      // up the fresh page; if we already tried, tell the user to refresh.
+      if (isChunkLoadError(e)) {
+        if (reloadOnceForStaleChunk()) return;
+        setErrorKind('stale-update');
+        setErrorText(
+          'This tool was updated while your page was open. Refresh to load the new version — your file stays on your device.',
+        );
+        setPhase('error');
+        return;
+      }
+      setErrorKind('generic');
       setErrorText(e instanceof Error ? e.message : 'Compression failed.');
       setPhase('error');
     }
@@ -314,13 +349,34 @@ export default function CompressPdfConverter() {
               <button type="button" onClick={() => setMode('quality')} style={segBtn(mode === 'quality')}>By quality level</button>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {mode === 'size'
-                ? SIZE_TARGETS.map((t, i) => (
+              {mode === 'size' ? (
+                <>
+                  {SIZE_TARGETS.map((t, i) => (
                     <button key={t.label} type="button" onClick={() => setSizeIdx(i)} style={chip(i === sizeIdx)}>{t.label}</button>
-                  ))
-                : QUALITY_LEVELS.map((l, i) => (
-                    <button key={l.label} type="button" onClick={() => setLevelIdx(i)} style={chip(i === levelIdx)}>{l.label}</button>
                   ))}
+                  <label
+                    style={{ ...chip(isCustom), display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    onClick={() => setSizeIdx(CUSTOM_IDX)}
+                  >
+                    Custom
+                    <input
+                      type="number"
+                      min={0.1}
+                      step={0.1}
+                      value={Number.isFinite(customMb) ? customMb : ''}
+                      onFocus={() => setSizeIdx(CUSTOM_IDX)}
+                      onChange={(e) => setCustomMb(parseFloat(e.target.value))}
+                      aria-label="Custom target size in megabytes"
+                      style={customInput}
+                    />
+                    MB
+                  </label>
+                </>
+              ) : (
+                QUALITY_LEVELS.map((l, i) => (
+                  <button key={l.label} type="button" onClick={() => setLevelIdx(i)} style={chip(i === levelIdx)}>{l.label}</button>
+                ))
+              )}
             </div>
           </div>
 
@@ -330,7 +386,13 @@ export default function CompressPdfConverter() {
               : 'Light/Balanced keep everything; Strong flattens pages to images for the biggest savings (text stays selectable).'}
           </div>
 
-          <button type="button" className="nudge" onClick={start} style={primaryBtn}>
+          <button
+            type="button"
+            className="nudge"
+            onClick={start}
+            disabled={!targetValid}
+            style={{ ...primaryBtn, opacity: targetValid ? 1 : 0.5, cursor: targetValid ? 'pointer' : 'not-allowed' }}
+          >
             <span>Compress PDF</span>
             <span className="nudge-arrow">&#8594;</span>
           </button>
@@ -393,15 +455,34 @@ export default function CompressPdfConverter() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
             </div>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--danger-title)', marginBottom: 4 }}>Already under your target</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--danger-title)', marginBottom: 4 }}>{ERROR_TITLES[errorKind]}</div>
               <div style={{ fontSize: 13.5, color: 'var(--ink-soft)', lineHeight: 1.5 }}>{errorText}</div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 20 }}>
-            <button type="button" className="nudge" onClick={() => setPhase('confirm')} style={{ ...primaryBtn, width: 'auto', padding: '12px 18px', fontSize: 14.5, whiteSpace: 'nowrap' }}>
-              <span>Pick a smaller target</span><span className="nudge-arrow">&#8594;</span>
-            </button>
-            <button type="button" onClick={reset} style={linkBtn}>Start over</button>
+            {errorKind === 'already-under' && (
+              <button type="button" className="nudge" onClick={() => setPhase('confirm')} style={errorPrimaryBtn}>
+                <span>Pick a smaller target</span><span className="nudge-arrow">&#8594;</span>
+              </button>
+            )}
+            {errorKind === 'stale-update' && (
+              <button type="button" className="nudge" onClick={() => window.location.reload()} style={errorPrimaryBtn}>
+                <span>Refresh page</span><span className="nudge-arrow">&#8594;</span>
+              </button>
+            )}
+            {errorKind === 'not-pdf' && (
+              <button type="button" className="nudge" onClick={reset} style={errorPrimaryBtn}>
+                <span>Choose another file</span><span className="nudge-arrow">&#8594;</span>
+              </button>
+            )}
+            {errorKind === 'generic' && (
+              <button type="button" className="nudge" onClick={reset} style={errorPrimaryBtn}>
+                <span>Start over</span><span className="nudge-arrow">&#8594;</span>
+              </button>
+            )}
+            {errorKind !== 'generic' && errorKind !== 'not-pdf' && (
+              <button type="button" onClick={reset} style={linkBtn}>Start over</button>
+            )}
           </div>
         </div>
       )}
@@ -556,6 +637,33 @@ const dangerPanel: CSSProperties = {
   border: '1px solid var(--danger-border)',
   borderRadius: 12,
   padding: 16,
+};
+const errorPrimaryBtn: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8,
+  background: 'var(--accent)',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 12,
+  padding: '12px 18px',
+  fontSize: 14.5,
+  fontWeight: 600,
+  cursor: 'pointer',
+  boxShadow: '0 2px 10px rgba(249,115,22,0.28)',
+  fontFamily: 'inherit',
+  whiteSpace: 'nowrap',
+};
+const customInput: CSSProperties = {
+  width: 64,
+  padding: '3px 6px',
+  borderRadius: 6,
+  border: '1px solid var(--hair-2)',
+  background: 'var(--card)',
+  color: 'var(--ink)',
+  font: 'inherit',
+  fontSize: 13,
+  fontWeight: 600,
 };
 function segIndicator(mode: Mode): CSSProperties {
   return {

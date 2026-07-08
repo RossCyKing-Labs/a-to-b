@@ -56,6 +56,26 @@ const cls = {
       })();
     </script>
 
+    <script is:inline>
+      // Deploy-skew recovery: if a lazy chunk 404s because a new deploy
+      // replaced the fingerprinted assets, reload once to pick up the fresh
+      // page. Vite fires 'vite:preloadError' for failed preloaded dynamic
+      // imports (covers island hydration); bare dynamic imports are handled
+      // by the converter's own catch, sharing the same guard key.
+      window.addEventListener('vite:preloadError', function (event) {
+        try {
+          var key = 'ab:chunk-reload';
+          var last = Number(sessionStorage.getItem(key) || 0);
+          if (Date.now() - last < 60000) return; // already tried recently
+          sessionStorage.setItem(key, String(Date.now()));
+        } catch (e) {
+          /* storage unavailable — still reload once per page life */
+        }
+        event.preventDefault();
+        window.location.reload();
+      });
+    </script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
