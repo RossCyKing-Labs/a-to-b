@@ -11,16 +11,25 @@
   if (!('serviceWorker' in navigator)) return;
 
   // Don't register on localhost dev unless explicitly desired (avoids stale caches
-  // surprising you mid-development).
+  // surprising you mid-development). Set localStorage 'sw-dev' = '1' to opt in
+  // for local SW testing against a production build.
   const isLocalhost =
     location.hostname === 'localhost' ||
     location.hostname === '127.0.0.1' ||
     location.hostname === '[::1]';
-  if (isLocalhost) return;
+  var swDev = false;
+  try {
+    swDev = localStorage.getItem('sw-dev') === '1';
+  } catch (e) {
+    /* storage unavailable */
+  }
+  if (isLocalhost && !swDev) return;
 
   window.addEventListener('load', function () {
     navigator.serviceWorker
-      .register('/sw.js', { scope: '/' })
+      // updateViaCache 'none': always fetch sw.js from the network on update
+      // checks, so a new deploy's SW is picked up immediately.
+      .register('/sw.js', { scope: '/', updateViaCache: 'none' })
       .catch(function (err) {
         console.warn('Service worker registration failed:', err);
       });

@@ -7,6 +7,12 @@
       "runtimeArgs": ["dev"],
       "port": 4321,
       "autoPort": true
+    },
+    {
+      "name": "wrangler-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["exec", "wrangler", "dev", "--port", "8788"],
+      "port": 8788
     }
   ]
 }
