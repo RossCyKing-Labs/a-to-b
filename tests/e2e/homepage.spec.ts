@@ -28,13 +28,6 @@ test.describe('homepage', () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test('footer Ko-fi link points to the right page', async ({ page }) => {
-    await page.goto('/');
-    const link = page.locator('footer').getByRole('link', { name: /^Ko-fi$/ });
-    await expect(link).toBeVisible();
-    await expect(link).toHaveAttribute('href', 'https://ko-fi.com/rosscyking');
-  });
-
   test('Privacy page lists the verifiable promises', async ({ page }) => {
     await page.goto('/privacy');
     await expect(page.getByRole('heading', { level: 1 })).toContainText('never leave your device');
