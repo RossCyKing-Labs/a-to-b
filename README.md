@@ -7,8 +7,6 @@ entirely in your browser — there is no upload endpoint on the site, so your fi
 never sent anywhere.
 
 **Live:** [fromatob.app](https://fromatob.app)
-&nbsp;·&nbsp;
-[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/rosscyking)
 
 ## Status
 
@@ -80,9 +78,7 @@ a third-party request, tracker, or upload endpoint will be rejected.
 
 I'm **Cheng-Yuan King** — I built a → b in my spare time because I was tired of file
 converters that upload your files to some random server. If it saved you time or a file,
-a coffee means a lot and helps justify the hours.
-
-[☕ Buy me a coffee on Ko-fi](https://ko-fi.com/rosscyking)
+that's the whole reward.
 
 ## License
 
